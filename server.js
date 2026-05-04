@@ -247,3 +247,8 @@ app.get("/pokemon-center-traffic", async (req, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`RestockDex API running on port ${PORT}`);
 });
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`RestockDex API running on port ${PORT}`);
+});
