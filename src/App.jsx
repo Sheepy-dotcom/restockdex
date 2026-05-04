@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import logo from "./assets/logo.png";
-import pcLogo from "./assets/pokemon center.png";
+import pcLogo from "./assets/pokemon-center.png";
 import "./App.css";
 
 function App() {
