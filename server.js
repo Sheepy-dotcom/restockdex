@@ -6,6 +6,8 @@ import { createClient } from "@supabase/supabase-js";
 const app = express();
 app.use(cors());
 
+const PORT = process.env.PORT || 3001;
+
 const supabase = createClient(
   "https://sgwecoojuxsqctxlaqfh.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnd2Vjb29qdXhzcWN0eGxhcWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODM5NTQsImV4cCI6MjA5MzQ1OTk1NH0.ToWRVgoywSHk6RBSjXSqy-ruPIH27keyzM-Ddajxiu4"
@@ -100,8 +102,7 @@ async function getMagicMadhouseProducts() {
 
     if (!link.includes("magicmadhouse.co.uk/pokemon-me-")) return;
 
-    const productName =
-      text || link.split("/").pop().replaceAll("-", " ");
+    const productName = text || link.split("/").pop().replaceAll("-", " ");
 
     if (!isWantedProduct(`${productName} ${link}`)) return;
 
@@ -127,6 +128,13 @@ async function getAllProducts() {
     result.status === "fulfilled" ? result.value : []
   );
 }
+
+app.get("/", (req, res) => {
+  res.json({
+    message: "RestockDex API is running",
+    routes: ["/stock", "/pokemon-center-traffic"],
+  });
+});
 
 app.get("/stock", async (req, res) => {
   try {
@@ -236,15 +244,6 @@ app.get("/pokemon-center-traffic", async (req, res) => {
   }
 });
 
-app.listen(3001, () => {
-  console.log("Filtered multi-shop drop detector running on port 3001");
-});
-const PORT = process.env.PORT || 3001;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});const PORT = process.env.PORT || 3001;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`RestockDex API running on port ${PORT}`);
 });
