@@ -4,25 +4,21 @@ import cors from "cors";
 const app = express();
 app.use(cors());
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 
 app.get("/", (req, res) => {
-  res.json({
-    message: "RestockDex API is running",
-  });
+  res.send("API is running");
 });
 
 app.get("/test", (req, res) => {
-  res.json({
-    status: "API working",
-  });
+  res.json({ status: "API working" });
 });
 
 app.get("/stock", (req, res) => {
   res.json([
     {
       product: "Test Booster Box",
-      store: "RestockDex Test Store",
+      store: "Test Store",
       stock: "Working",
       link: "https://www.restockdex.co.uk",
     },
@@ -42,5 +38,5 @@ app.get("/pokemon-center-traffic", (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`RestockDex API running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
