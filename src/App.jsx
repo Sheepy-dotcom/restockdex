@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import logo from "./assets/Logo.png";
+import logo from "./assets/logo.png";
 import pcLogo from "./assets/pokemon-center.png";
 import "./App.css";
 
