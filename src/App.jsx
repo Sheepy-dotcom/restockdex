@@ -63,13 +63,10 @@ function App() {
   return (
     <div className="page">
       <div className="app">
-
-        {/* TEXT LOGO */}
         <div className="logoContainer">
           <h1 className="textLogo">RestockDex</h1>
         </div>
 
-        {/* HEADER */}
         <header className="topbar">
           <div>
             <p className="eyebrow">UK Pokémon TCG Drop Monitor</p>
@@ -84,9 +81,8 @@ function App() {
           </div>
         </header>
 
-        {/* TRAFFIC */}
-        <section className="panel">
-          <div className="panelHeader">
+        <section className="panel trafficPanel">
+          <div className="panelHeader centeredHeader">
             <h2>Pokémon Center Traffic</h2>
 
             <span className={isHighTraffic ? "pill danger" : "pill success"}>
@@ -94,9 +90,20 @@ function App() {
             </span>
           </div>
 
-          <div className={isHighTraffic ? "trafficCard high" : "trafficCard low"}>
-            <h3>{isHighTraffic ? "🚨 Possible Drop" : "🟢 Normal Activity"}</h3>
-            <p>{trafficData?.stock || "Checking..."}</p>
+          <div className={`trafficCard centered ${isHighTraffic ? "high" : "low"}`}>
+            <h3>
+              {!trafficData
+                ? "🟡 Monitor Starting"
+                : isHighTraffic
+                ? "🚨 Possible Drop"
+                : "🟢 Normal Activity"}
+            </h3>
+
+            <p className="trafficText">
+              {trafficData
+                ? trafficData.stock
+                : "Monitor active — checking every 60 seconds"}
+            </p>
 
             <a
               href="https://www.pokemoncenter.com/en-gb/category/new-releases"
@@ -108,7 +115,6 @@ function App() {
           </div>
         </section>
 
-        {/* FILTERS */}
         <section className="panel">
           <h2>Filters</h2>
 
@@ -144,7 +150,6 @@ function App() {
           </div>
         </section>
 
-        {/* LIVE DROPS */}
         <section className="panel">
           <h2>Live Drops</h2>
 
@@ -173,7 +178,6 @@ function App() {
             })}
           </div>
         </section>
-
       </div>
     </div>
   );

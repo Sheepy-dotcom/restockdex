@@ -290,3 +290,39 @@ h3 {
   height: 28px;
   object-fit: contain;
 }
+.textLogo {
+  color: #ffd700;
+  font-size: 48px;
+  margin: 0;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.trafficPanel {
+  text-align: center;
+}
+
+.centeredHeader {
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.centered {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.trafficText {
+  color: #d0d0d0;
+  max-width: 340px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.trafficCard.centered h3 {
+  font-size: 22px;
+}
