@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import logo from "./assets/logo.png";
-import pcLogo from "./assets/pokemon-center.png";
 import "./App.css";
 
 function App() {
@@ -66,9 +64,9 @@ function App() {
     <div className="page">
       <div className="app">
 
-        {/* MAIN LOGO */}
+        {/* TEXT LOGO */}
         <div className="logoContainer">
-          <img src={logo} alt="RestockDex Logo" className="logoImg" />
+          <h1 className="textLogo">RestockDex</h1>
         </div>
 
         {/* HEADER */}
@@ -86,14 +84,10 @@ function App() {
           </div>
         </header>
 
-        {/* POKEMON CENTER TRAFFIC */}
+        {/* TRAFFIC */}
         <section className="panel">
           <div className="panelHeader">
-
-            <div className="trafficHeader">
-              <img src={pcLogo} alt="Pokemon Center" className="pcLogo" />
-              <h2>Pokémon Center Traffic</h2>
-            </div>
+            <h2>Pokémon Center Traffic</h2>
 
             <span className={isHighTraffic ? "pill danger" : "pill success"}>
               {isHighTraffic ? "High Traffic" : "Low Traffic"}
