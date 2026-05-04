@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
+const API_URL = "https://YOUR-RAILWAY-URL-HERE";
+
 function App() {
   const products = [
     "Booster Packs",
@@ -32,7 +34,7 @@ function App() {
 
   async function fetchStock() {
     try {
-      const res = await fetch("http://localhost:3001/stock");
+      const res = await fetch(`${API_URL}/stock`);
       const data = await res.json();
       setLiveData(data);
     } catch (error) {
@@ -42,7 +44,7 @@ function App() {
 
   async function fetchTraffic() {
     try {
-      const res = await fetch("http://localhost:3001/pokemon-center-traffic");
+      const res = await fetch(`${API_URL}/pokemon-center-traffic`);
       const data = await res.json();
       setTrafficData(data[0]);
     } catch (error) {
