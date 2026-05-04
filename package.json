@@ -8,6 +8,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "latest",
     "cors": "latest",
     "express": "latest",
     "vite": "latest",
