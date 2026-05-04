@@ -239,3 +239,8 @@ app.get("/pokemon-center-traffic", async (req, res) => {
 app.listen(3001, () => {
   console.log("Filtered multi-shop drop detector running on port 3001");
 });
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
