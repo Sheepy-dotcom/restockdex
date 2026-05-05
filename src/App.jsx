@@ -1,4 +1,4 @@
- import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 const API_URL = "https://restockdex-production.up.railway.app";
@@ -63,13 +63,11 @@ function App() {
       return;
     }
 
-    const formattedPostcode = postcode.trim().toUpperCase();
+    const cleanPostcode = postcode.trim().toUpperCase();
 
-    localStorage.setItem("restockdex_postcode", formattedPostcode);
-    setPostcode(formattedPostcode);
-    setSavedPostcode(formattedPostcode);
-
-    alert(`Postcode saved: ${formattedPostcode}`);
+    localStorage.setItem("restockdex_postcode", cleanPostcode);
+    setPostcode(cleanPostcode);
+    setSavedPostcode(cleanPostcode);
   }
 
   function toggleProduct(product) {
@@ -85,55 +83,49 @@ function App() {
   return (
     <div className="page">
       <div className="app">
-        <div className="logoContainer">
+        <header className="hero">
           <h1 className="textLogo">RestockDex</h1>
-        </div>
-
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">UK Pokémon TCG Drop Monitor</p>
-            <p className="subtitle">
-              Live Pokémon drops, store tracking and Pokémon Center alerts.
-            </p>
-          </div>
-
+          <p className="eyebrow">UK Pokémon TCG Drop Monitor</p>
+          <p className="subtitle">
+            Live Pokémon drops, store tracking and Pokémon Center traffic alerts.
+          </p>
           <div className="statusBox">
             <span className="statusDot"></span>
-            Live
+            Live Monitoring
           </div>
         </header>
 
-        <section className="panel trafficPanel">
-          <div className="panelHeader centeredHeader">
+        <section className="trafficSection">
+          <div className="trafficPanel">
             <h2>Pokémon Center Traffic</h2>
 
             <span className={isHighTraffic ? "pill danger" : "pill success"}>
               {isHighTraffic ? "High Traffic" : "Low Traffic"}
             </span>
-          </div>
 
-          <div className={`trafficCard centered ${isHighTraffic ? "high" : "low"}`}>
-            <h3>
-              {!trafficData
-                ? "🟡 Monitor Starting"
-                : isHighTraffic
-                ? "🚨 Possible Drop"
-                : "🟢 Normal Activity"}
-            </h3>
+            <div className={`trafficCard ${isHighTraffic ? "high" : "low"}`}>
+              <h3>
+                {!trafficData
+                  ? "🟡 Monitor Starting"
+                  : isHighTraffic
+                  ? "🚨 Possible Drop"
+                  : "🟢 Normal Activity"}
+              </h3>
 
-            <p className="trafficText">
-              {trafficData
-                ? trafficData.stock
-                : "Monitor active — checking every 60 seconds"}
-            </p>
+              <p>
+                {trafficData
+                  ? trafficData.stock
+                  : "Monitor active — checking every 60 seconds"}
+              </p>
 
-            <a
-              href="https://www.pokemoncenter.com/en-gb/category/new-releases"
-              target="_blank"
-              className="viewButton"
-            >
-              Open Pokémon Center
-            </a>
+              <a
+                href="https://www.pokemoncenter.com/en-gb/category/new-releases"
+                target="_blank"
+                className="viewButton"
+              >
+                Open Pokémon Center
+              </a>
+            </div>
           </div>
         </section>
 
@@ -142,7 +134,7 @@ function App() {
 
           <input
             className="input"
-            placeholder="Postcode"
+            placeholder="Enter postcode"
             value={postcode}
             onChange={(e) => setPostcode(e.target.value.toUpperCase())}
           />
@@ -153,7 +145,7 @@ function App() {
 
           {savedPostcode && (
             <p className="savedPostcode">
-              Tracking near: <strong>{savedPostcode}</strong>
+              Tracking near <strong>{savedPostcode}</strong>
             </p>
           )}
 
