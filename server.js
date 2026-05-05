@@ -6,12 +6,12 @@ import { createClient } from "@supabase/supabase-js";
 const app = express();
 app.use(cors());
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-const SUPABASE_URL = "https://sgwecoojuxsqctxlaqfh.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnd2Vjb29qdXhzcWN0eGxhcWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODM5NTQsImV4cCI6MjA5MzQ1OTk1NH0.ToWRVgoywSHk6RBSjXSqy-ruPIH27keyzM-Ddajxiu4";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(
+  "https://sgwecoojuxsqctxlaqfh.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnd2Vjb29qdXhzcWN0eGxhcWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODM5NTQsImV4cCI6MjA5MzQ1OTk1NH0.ToWRVgoywSHk6RBSjXSqy-ruPIH27keyzM-Ddajxiu4"
+);
 
 const CARD_VAULT_URL =
   "https://thecardvault.co.uk/collections/pokemon-new-releases";
@@ -22,69 +22,56 @@ const MAGIC_MADHOUSE_URL =
 const POKEMON_CENTER_URL =
   "https://www.pokemoncenter.com/en-gb/category/new-releases";
 
-function isWantedProduct(text) {
-  const keywords = [
-    "booster pack",
-    "booster packs",
-    "booster bundle",
-    "booster box",
-    "bundle",
-    "etb",
-    "elite trainer box",
-    "tin",
-    "tins",
-    "poster collection",
-    "collection",
-    "pokemon center",
-    "ascended hero",
-    "ascended heroes",
-  ];
+const KEYWORDS = [
+  "booster",
+  "booster pack",
+  "booster box",
+  "booster bundle",
+  "etb",
+  "elite trainer",
+  "elite trainer box",
+  "tin",
+  "tins",
+  "collection",
+  "poster collection",
+  "charizard",
+  "151",
+  "prismatic",
+  "surging sparks",
+  "destined rivals",
+  "journey together",
+  "phantasmal flames",
+  "ascended heroes",
+  "pokemon center",
+];
 
+function matchesKeyword(text) {
   const lower = text.toLowerCase();
-  return keywords.some((keyword) => lower.includes(keyword));
-}
-
-async function fetchWithTimeout(url, options = {}, timeout = 8000) {
-  const controller = new AbortController();
-
-  const timer = setTimeout(() => {
-    controller.abort();
-  }, timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-
-    return response;
-  } finally {
-    clearTimeout(timer);
-  }
+  return KEYWORDS.some((keyword) => lower.includes(keyword));
 }
 
 async function getCardVaultProducts() {
-  const response = await fetchWithTimeout(CARD_VAULT_URL, {
+  const response = await fetch(CARD_VAULT_URL, {
     headers: {
       "User-Agent": "Mozilla/5.0",
+      Accept: "text/html",
     },
   });
 
   const html = await response.text();
   const $ = cheerio.load(html);
-
   const products = [];
 
   $("a").each((_, el) => {
     const text = $(el).text().replace(/\s+/g, " ").trim();
     const href = $(el).attr("href");
 
+    if (!text || !href) return;
+
     if (
-      text &&
-      href &&
       href.includes("/products/") &&
       text.toLowerCase().includes("pokemon") &&
-      isWantedProduct(text)
+      matchesKeyword(text)
     ) {
       const link = href.startsWith("http")
         ? href
@@ -104,15 +91,15 @@ async function getCardVaultProducts() {
 }
 
 async function getMagicMadhouseProducts() {
-  const response = await fetchWithTimeout(MAGIC_MADHOUSE_URL, {
+  const response = await fetch(MAGIC_MADHOUSE_URL, {
     headers: {
       "User-Agent": "Mozilla/5.0",
+      Accept: "text/html",
     },
   });
 
   const html = await response.text();
   const $ = cheerio.load(html);
-
   const products = [];
 
   $("a").each((_, el) => {
@@ -129,7 +116,7 @@ async function getMagicMadhouseProducts() {
 
     const productName = text || link.split("/").pop().replaceAll("-", " ");
 
-    if (!isWantedProduct(`${productName} ${link}`)) return;
+    if (!matchesKeyword(`${productName} ${link}`)) return;
 
     if (!products.some((p) => p.link === link)) {
       products.push({
@@ -181,17 +168,18 @@ app.get("/stock", async (req, res) => {
           product: "Supabase error",
           store: "System",
           stock: error.message,
+          alert: false,
           link: "",
         },
       ]);
     }
 
     const existingLinks = (existing || []).map((p) => p.link);
-
     const results = [];
 
     for (const product of products) {
       const isNew = !existingLinks.includes(product.link);
+      const keywordMatch = matchesKeyword(product.product);
 
       if (isNew) {
         await supabase.from("products").insert([{ link: product.link }]);
@@ -200,6 +188,12 @@ app.get("/stock", async (req, res) => {
       results.push({
         ...product,
         stock: isNew ? "NEW DROP 🚨" : "Already seen",
+        alert:
+          isNew && keywordMatch
+            ? "KEYWORD ALERT 🔥"
+            : keywordMatch
+            ? "Keyword match"
+            : false,
       });
     }
 
@@ -210,6 +204,7 @@ app.get("/stock", async (req, res) => {
         product: "Server error",
         store: "System",
         stock: error.message,
+        alert: false,
         link: "",
       },
     ]);
@@ -220,15 +215,12 @@ app.get("/pokemon-center-traffic", async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const response = await fetchWithTimeout(
-      POKEMON_CENTER_URL,
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-        },
+    const response = await fetch(POKEMON_CENTER_URL, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        Accept: "text/html",
       },
-      8000
-    );
+    });
 
     const html = await response.text();
     const responseTime = Date.now() - startTime;
@@ -276,6 +268,9 @@ app.get("/pokemon-center-traffic", async (req, res) => {
         product: "Pokémon Center Error",
         store: "System",
         stock: error.message,
+        httpStatus: "Error",
+        responseTime: "Error",
+        detectedSignals: [],
         link: POKEMON_CENTER_URL,
       },
     ]);
