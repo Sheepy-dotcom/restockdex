@@ -6,7 +6,8 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "latest",
-    "cors": "latest"
+    "cheerio": "latest",
+    "cors": "latest",
+    "express": "latest"
   }
 }
