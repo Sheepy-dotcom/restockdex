@@ -4,33 +4,20 @@ import "./App.css";
 const API_URL = "https://restockdex-production.up.railway.app";
 
 function App() {
-  const products = [
-    "Booster Packs",
-    "Booster Bundles",
-    "Booster Boxes",
-    "Elite Trainer Boxes",
-    "Tins",
-    "Collections",
-    "Pokémon Center Drops",
-  ];
-
   const [liveData, setLiveData] = useState([]);
   const [trafficData, setTrafficData] = useState(null);
-  const [selectedProducts, setSelectedProducts] = useState([]);
   const [postcode, setPostcode] = useState(
     localStorage.getItem("restockdex_postcode") || ""
   );
   const [savedPostcode, setSavedPostcode] = useState(
     localStorage.getItem("restockdex_postcode") || ""
   );
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [seenLinks, setSeenLinks] = useState(new Set());
+  const [notificationPermission, setNotificationPermission] = useState(
+    "Notification" in window ? Notification.permission : "unsupported"
+  );
 
   useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-
     fetchStock();
     fetchTraffic();
 
@@ -41,6 +28,23 @@ function App() {
 
     return () => clearInterval(interval);
   }, []);
+
+  async function requestNotifications() {
+    if (!("Notification" in window)) {
+      alert("Your browser does not support notifications.");
+      setNotificationPermission("unsupported");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+
+    if (permission === "granted") {
+      new Notification("RestockDex alerts enabled 🔔", {
+        body: "You’ll be notified when new Pokémon drops are detected.",
+      });
+    }
+  }
 
   async function fetchStock() {
     try {
@@ -79,19 +83,6 @@ function App() {
       const res = await fetch(`${API_URL}/pokemon-center-traffic`);
       const data = await res.json();
       setTrafficData(data[0]);
-
-      const traffic = data[0];
-      const isPossibleDrop = traffic?.stock?.includes("POSSIBLE DROP");
-
-      if (
-        isPossibleDrop &&
-        "Notification" in window &&
-        Notification.permission === "granted"
-      ) {
-        new Notification("🚨 Pokémon Center Traffic Alert!", {
-          body: "Possible drop or high traffic detected.",
-        });
-      }
     } catch (error) {
       console.error("Traffic error:", error);
     }
@@ -104,18 +95,9 @@ function App() {
     }
 
     const cleanPostcode = postcode.trim().toUpperCase();
-
     localStorage.setItem("restockdex_postcode", cleanPostcode);
     setPostcode(cleanPostcode);
     setSavedPostcode(cleanPostcode);
-  }
-
-  function toggleProduct(product) {
-    setSelectedProducts((current) =>
-      current.includes(product)
-        ? current.filter((p) => p !== product)
-        : [...current, product]
-    );
   }
 
   const isHighTraffic = trafficData?.stock?.includes("POSSIBLE DROP");
@@ -129,9 +111,43 @@ function App() {
           <p className="subtitle">
             Live Pokémon drops, store tracking and Pokémon Center traffic alerts.
           </p>
+
           <div className="statusBox">
             <span className="statusDot"></span>
             Live Monitoring
+          </div>
+
+          <div className="notificationBox">
+            <h3>🔔 Drop Notifications</h3>
+
+            {notificationPermission === "granted" && (
+              <p className="notifEnabled">
+                Notifications are enabled. You’ll be alerted when new drops are detected.
+              </p>
+            )}
+
+            {notificationPermission === "denied" && (
+              <p className="notifBlocked">
+                Notifications are blocked. Enable them in your browser settings to receive alerts.
+              </p>
+            )}
+
+            {notificationPermission === "default" && (
+              <>
+                <p>
+                  Turn on browser alerts so you don’t miss new Pokémon drops.
+                </p>
+                <button className="notifyButton" onClick={requestNotifications}>
+                  Enable Drop Alerts
+                </button>
+              </>
+            )}
+
+            {notificationPermission === "unsupported" && (
+              <p className="notifBlocked">
+                This browser does not support notifications.
+              </p>
+            )}
           </div>
         </header>
 
@@ -188,30 +204,6 @@ function App() {
               Tracking near <strong>{savedPostcode}</strong>
             </p>
           )}
-
-          <div className="dropdown">
-            <button
-              className="dropdownButton"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            >
-              Select Products {dropdownOpen ? "▲" : "▼"}
-            </button>
-
-            {dropdownOpen && (
-              <div className="dropdownMenu">
-                {products.map((product) => (
-                  <label key={product} className="dropdownItem">
-                    <input
-                      type="checkbox"
-                      checked={selectedProducts.includes(product)}
-                      onChange={() => toggleProduct(product)}
-                    />
-                    {product}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
         </section>
 
         <section className="panel">
