@@ -1,21 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const API_URL = "https://restockdex-production.up.railway.app";
 
 function App() {
+  const products = [
+    "Booster Packs",
+    "Booster Bundles",
+    "Booster Boxes",
+    "Elite Trainer Boxes",
+    "Tins",
+    "Collections",
+    "Pokémon Center Drops",
+  ];
+
   const [liveData, setLiveData] = useState([]);
   const [trafficData, setTrafficData] = useState(null);
-  const [postcode, setPostcode] = useState(
-    localStorage.getItem("restockdex_postcode") || ""
-  );
-  const [savedPostcode, setSavedPostcode] = useState(
-    localStorage.getItem("restockdex_postcode") || ""
-  );
-  const [seenLinks, setSeenLinks] = useState(new Set());
-  const [notificationPermission, setNotificationPermission] = useState(
-    "Notification" in window ? Notification.permission : "unsupported"
-  );
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [postcode, setPostcode] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showTrafficAlert, setShowTrafficAlert] = useState(false);
+
+  const alertedRef = useRef(false);
 
   useEffect(() => {
     fetchStock();
@@ -29,20 +35,28 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  async function requestNotifications() {
-    if (!("Notification" in window)) {
-      alert("Your browser does not support notifications.");
-      setNotificationPermission("unsupported");
-      return;
-    }
+  function playAlertSound() {
+    try {
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-    const permission = await Notification.requestPermission();
-    setNotificationPermission(permission);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
 
-    if (permission === "granted") {
-      new Notification("RestockDex alerts enabled 🔔", {
-        body: "You’ll be notified when new Pokémon drops are detected.",
-      });
+      oscillator.frequency.value = 880;
+      oscillator.type = "sine";
+
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioContext.currentTime + 0.6
+      );
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.6);
+    } catch (error) {
+      console.error("Sound error:", error);
     }
   }
 
@@ -50,28 +64,6 @@ function App() {
     try {
       const res = await fetch(`${API_URL}/stock`);
       const data = await res.json();
-
-      setSeenLinks((currentSeenLinks) => {
-        const updatedSeenLinks = new Set(currentSeenLinks);
-
-        data.forEach((item) => {
-          const isNewDrop = item.stock?.includes("NEW DROP");
-          const hasNotBeenNotified = !updatedSeenLinks.has(item.link);
-
-          if (isNewDrop && hasNotBeenNotified) {
-            updatedSeenLinks.add(item.link);
-
-            if ("Notification" in window && Notification.permission === "granted") {
-              new Notification("🚨 New Pokémon Drop!", {
-                body: item.product,
-              });
-            }
-          }
-        });
-
-        return updatedSeenLinks;
-      });
-
       setLiveData(data);
     } catch (error) {
       console.error("Stock error:", error);
@@ -82,106 +74,118 @@ function App() {
     try {
       const res = await fetch(`${API_URL}/pokemon-center-traffic`);
       const data = await res.json();
-      setTrafficData(data[0]);
+      const traffic = data[0];
+
+      setTrafficData(traffic);
+
+      const highTraffic =
+        traffic?.stock?.includes("POSSIBLE DROP") ||
+        traffic?.stock?.includes("HIGH TRAFFIC");
+
+      if (highTraffic && !alertedRef.current) {
+        alertedRef.current = true;
+        setShowTrafficAlert(true);
+        playAlertSound();
+
+        setTimeout(() => {
+          setShowTrafficAlert(false);
+        }, 12000);
+      }
+
+      if (!highTraffic) {
+        alertedRef.current = false;
+      }
     } catch (error) {
       console.error("Traffic error:", error);
     }
   }
 
-  function savePostcode() {
-    if (!postcode.trim()) {
-      alert("Please enter a postcode.");
-      return;
-    }
-
-    const cleanPostcode = postcode.trim().toUpperCase();
-    localStorage.setItem("restockdex_postcode", cleanPostcode);
-    setPostcode(cleanPostcode);
-    setSavedPostcode(cleanPostcode);
+  function toggleProduct(product) {
+    setSelectedProducts((current) =>
+      current.includes(product)
+        ? current.filter((p) => p !== product)
+        : [...current, product]
+    );
   }
 
-  const isHighTraffic = trafficData?.stock?.includes("POSSIBLE DROP");
+  const isHighTraffic =
+    trafficData?.stock?.includes("POSSIBLE DROP") ||
+    trafficData?.stock?.includes("HIGH TRAFFIC");
 
   return (
     <div className="page">
+      {showTrafficAlert && (
+        <div className="trafficPopup">
+          <h3>🚨 Pokémon Center Traffic Spike</h3>
+          <p>Possible drop or queue detected. Check Pokémon Center now.</p>
+
+          <a
+            href="https://www.pokemoncenter.com/en-gb/category/new-releases"
+            target="_blank"
+            className="popupButton"
+          >
+            Open Pokémon Center
+          </a>
+
+          <button
+            className="popupClose"
+            onClick={() => setShowTrafficAlert(false)}
+          >
+            Close
+          </button>
+        </div>
+      )}
+
       <div className="app">
-        <header className="hero">
+        <div className="logoContainer">
           <h1 className="textLogo">RestockDex</h1>
-          <p className="eyebrow">UK Pokémon TCG Drop Monitor</p>
-          <p className="subtitle">
-            Live Pokémon drops, store tracking and Pokémon Center traffic alerts.
-          </p>
+        </div>
+
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">UK Pokémon TCG Drop Monitor</p>
+            <p className="subtitle">
+              Live Pokémon drops, store tracking and Pokémon Center alerts.
+            </p>
+          </div>
 
           <div className="statusBox">
             <span className="statusDot"></span>
-            Live Monitoring
-          </div>
-
-          <div className="notificationBox">
-            <h3>🔔 Drop Notifications</h3>
-
-            {notificationPermission === "granted" && (
-              <p className="notifEnabled">
-                Notifications are enabled. You’ll be alerted when new drops are detected.
-              </p>
-            )}
-
-            {notificationPermission === "denied" && (
-              <p className="notifBlocked">
-                Notifications are blocked. Enable them in your browser settings to receive alerts.
-              </p>
-            )}
-
-            {notificationPermission === "default" && (
-              <>
-                <p>
-                  Turn on browser alerts so you don’t miss new Pokémon drops.
-                </p>
-                <button className="notifyButton" onClick={requestNotifications}>
-                  Enable Drop Alerts
-                </button>
-              </>
-            )}
-
-            {notificationPermission === "unsupported" && (
-              <p className="notifBlocked">
-                This browser does not support notifications.
-              </p>
-            )}
+            Live
           </div>
         </header>
 
-        <section className="trafficSection">
-          <div className="trafficPanel">
+        <section className="panel trafficPanel">
+          <div className="panelHeader centeredHeader">
             <h2>Pokémon Center Traffic</h2>
 
             <span className={isHighTraffic ? "pill danger" : "pill success"}>
               {isHighTraffic ? "High Traffic" : "Low Traffic"}
             </span>
+          </div>
 
-            <div className={`trafficCard ${isHighTraffic ? "high" : "low"}`}>
-              <h3>
-                {!trafficData
-                  ? "🟡 Monitor Starting"
-                  : isHighTraffic
-                  ? "🚨 Possible Drop"
-                  : "🟢 Normal Activity"}
-              </h3>
+          <div className={`trafficCard centered ${isHighTraffic ? "high" : "low"}`}>
+            <h3>
+              {!trafficData
+                ? "🟡 Monitor Starting"
+                : isHighTraffic
+                ? "🚨 Possible Drop"
+                : "🟢 Normal Activity"}
+            </h3>
 
-              <p>
-                {trafficData
-                  ? trafficData.stock
-                  : "Monitor active — checking every 60 seconds"}
-              </p>
+            <p className="trafficText">
+              {trafficData
+                ? trafficData.stock
+                : "Monitor active — checking every 60 seconds"}
+            </p>
 
-              <a
-                href="https://www.pokemoncenter.com/en-gb/category/new-releases"
-                target="_blank"
-                className="viewButton"
-              >
-                Open Pokémon Center
-              </a>
-            </div>
+            <a
+              href="https://www.pokemoncenter.com/en-gb/category/new-releases"
+              target="_blank"
+              className="viewButton"
+            >
+              Open Pokémon Center
+            </a>
           </div>
         </section>
 
@@ -190,20 +194,34 @@ function App() {
 
           <input
             className="input"
-            placeholder="Enter postcode"
+            placeholder="Postcode"
             value={postcode}
             onChange={(e) => setPostcode(e.target.value.toUpperCase())}
           />
 
-          <button className="saveButton" onClick={savePostcode}>
-            Save Postcode
-          </button>
+          <div className="dropdown">
+            <button
+              className="dropdownButton"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            >
+              Select Products {dropdownOpen ? "▲" : "▼"}
+            </button>
 
-          {savedPostcode && (
-            <p className="savedPostcode">
-              Tracking near <strong>{savedPostcode}</strong>
-            </p>
-          )}
+            {dropdownOpen && (
+              <div className="dropdownMenu">
+                {products.map((product) => (
+                  <label key={product} className="dropdownItem">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.includes(product)}
+                      onChange={() => toggleProduct(product)}
+                    />
+                    {product}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="panel">

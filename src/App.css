@@ -335,4 +335,61 @@ body::before {
     display: inline-flex;
     margin-top: 14px;
   }
+}.trafficPopup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  width: calc(100% - 28px);
+  max-width: 420px;
+  background: linear-gradient(135deg, #7f1d1d, #050505);
+  border: 1px solid rgba(239, 68, 68, 0.8);
+  color: white;
+  padding: 18px;
+  border-radius: 18px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
+  animation: popupDrop 0.35s ease-out;
+}
+
+.trafficPopup h3 {
+  margin: 0 0 8px;
+  color: #fff;
+}
+
+.trafficPopup p {
+  color: #f3d1d1;
+  margin-bottom: 14px;
+}
+
+.popupButton {
+  display: block;
+  background: #ffd700;
+  color: #050505;
+  text-decoration: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.popupClose {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+@keyframes popupDrop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -18px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
