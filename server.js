@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 const supabase = createClient(
   "https://sgwecoojuxsqctxlaqfh.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnd2Vjb29qdXhzcWN0eGxhcWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODM5NTQsImV4cCI6MjA5MzQ1OTk1NH0.ToWRVgoywSHk6RBSjXSqy-ruPIH27keyzM-Ddajxiu4"
+  "YOUR_SUPABASE_ANON_KEY_HERE"
 );
 
 const CARD_VAULT_URL =
@@ -27,6 +27,7 @@ const KEYWORDS = [
   "booster pack",
   "booster box",
   "booster bundle",
+  "bundle",
   "etb",
   "elite trainer",
   "elite trainer box",
@@ -50,15 +51,27 @@ function matchesKeyword(text) {
   return KEYWORDS.some((keyword) => lower.includes(keyword));
 }
 
-async function getCardVaultProducts() {
-  const response = await fetch(CARD_VAULT_URL, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-      Accept: "text/html",
-    },
-  });
+async function fetchWithTimeout(url, timeout = 7000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
 
-  const html = await response.text();
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        Accept: "text/html",
+      },
+    });
+
+    return await response.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function getCardVaultProducts() {
+  const html = await fetchWithTimeout(CARD_VAULT_URL);
   const $ = cheerio.load(html);
   const products = [];
 
@@ -87,18 +100,11 @@ async function getCardVaultProducts() {
     }
   });
 
-  return products.slice(0, 30);
+  return products.slice(0, 25);
 }
 
 async function getMagicMadhouseProducts() {
-  const response = await fetch(MAGIC_MADHOUSE_URL, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-      Accept: "text/html",
-    },
-  });
-
-  const html = await response.text();
+  const html = await fetchWithTimeout(MAGIC_MADHOUSE_URL);
   const $ = cheerio.load(html);
   const products = [];
 
@@ -127,18 +133,7 @@ async function getMagicMadhouseProducts() {
     }
   });
 
-  return products.slice(0, 30);
-}
-
-async function getAllProducts() {
-  const results = await Promise.allSettled([
-    getCardVaultProducts(),
-    getMagicMadhouseProducts(),
-  ]);
-
-  return results.flatMap((result) =>
-    result.status === "fulfilled" ? result.value : []
-  );
+  return products.slice(0, 15);
 }
 
 app.get("/", (req, res) => {
@@ -149,14 +144,31 @@ app.get("/", (req, res) => {
 });
 
 app.get("/test", (req, res) => {
-  res.json({
-    status: "API working",
-  });
+  res.json({ status: "API working" });
 });
 
 app.get("/stock", async (req, res) => {
   try {
-    const products = await getAllProducts();
+    const shopResults = await Promise.allSettled([
+      getCardVaultProducts(),
+      getMagicMadhouseProducts(),
+    ]);
+
+    const products = shopResults.flatMap((result) =>
+      result.status === "fulfilled" ? result.value : []
+    );
+
+    if (products.length === 0) {
+      return res.json([
+        {
+          product: "No products detected right now",
+          store: "System",
+          stock: "Try again shortly",
+          alert: false,
+          link: "",
+        },
+      ]);
+    }
 
     const { data: existing, error } = await supabase
       .from("products")
@@ -215,14 +227,7 @@ app.get("/pokemon-center-traffic", async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const response = await fetch(POKEMON_CENTER_URL, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        Accept: "text/html",
-      },
-    });
-
-    const html = await response.text();
+    const html = await fetchWithTimeout(POKEMON_CENTER_URL, 5000);
     const responseTime = Date.now() - startTime;
     const lowerHtml = html.toLowerCase();
 
@@ -243,11 +248,7 @@ app.get("/pokemon-center-traffic", async (req, res) => {
 
     let status = "Normal";
 
-    if (
-      response.status !== 200 ||
-      responseTime > 4000 ||
-      detectedSignals.length > 0
-    ) {
+    if (responseTime > 4000 || detectedSignals.length > 0) {
       status = "POSSIBLE DROP / HIGH TRAFFIC 🚨";
     }
 
@@ -256,7 +257,7 @@ app.get("/pokemon-center-traffic", async (req, res) => {
         product: "Pokémon Center Monitor",
         store: "Pokémon Center UK",
         stock: status,
-        httpStatus: response.status,
+        httpStatus: 200,
         responseTime: `${responseTime}ms`,
         detectedSignals,
         link: POKEMON_CENTER_URL,
@@ -265,12 +266,12 @@ app.get("/pokemon-center-traffic", async (req, res) => {
   } catch (error) {
     res.json([
       {
-        product: "Pokémon Center Error",
-        store: "System",
-        stock: error.message,
+        product: "Pokémon Center Monitor",
+        store: "Pokémon Center UK",
+        stock: "Possible blocking / timeout",
         httpStatus: "Error",
-        responseTime: "Error",
-        detectedSignals: [],
+        responseTime: "Timeout",
+        detectedSignals: ["timeout or blocked"],
         link: POKEMON_CENTER_URL,
       },
     ]);
