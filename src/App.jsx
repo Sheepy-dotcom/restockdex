@@ -24,8 +24,13 @@ function App() {
     localStorage.getItem("restockdex_postcode") || ""
   );
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [seenLinks, setSeenLinks] = useState(new Set());
 
   useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
     fetchStock();
     fetchTraffic();
 
@@ -41,6 +46,28 @@ function App() {
     try {
       const res = await fetch(`${API_URL}/stock`);
       const data = await res.json();
+
+      setSeenLinks((currentSeenLinks) => {
+        const updatedSeenLinks = new Set(currentSeenLinks);
+
+        data.forEach((item) => {
+          const isNewDrop = item.stock?.includes("NEW DROP");
+          const hasNotBeenNotified = !updatedSeenLinks.has(item.link);
+
+          if (isNewDrop && hasNotBeenNotified) {
+            updatedSeenLinks.add(item.link);
+
+            if ("Notification" in window && Notification.permission === "granted") {
+              new Notification("🚨 New Pokémon Drop!", {
+                body: item.product,
+              });
+            }
+          }
+        });
+
+        return updatedSeenLinks;
+      });
+
       setLiveData(data);
     } catch (error) {
       console.error("Stock error:", error);
@@ -52,6 +79,19 @@ function App() {
       const res = await fetch(`${API_URL}/pokemon-center-traffic`);
       const data = await res.json();
       setTrafficData(data[0]);
+
+      const traffic = data[0];
+      const isPossibleDrop = traffic?.stock?.includes("POSSIBLE DROP");
+
+      if (
+        isPossibleDrop &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        new Notification("🚨 Pokémon Center Traffic Alert!", {
+          body: "Possible drop or high traffic detected.",
+        });
+      }
     } catch (error) {
       console.error("Traffic error:", error);
     }

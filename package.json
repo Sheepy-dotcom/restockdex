@@ -8,7 +8,9 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "latest",
     "@vitejs/plugin-react": "latest",
+    "cheerio": "latest",
     "cors": "latest",
     "express": "latest",
     "vite": "latest",
