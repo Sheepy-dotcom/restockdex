@@ -5,8 +5,21 @@ import logo from "./assets/restockdex-logo.png";
 const API_URL = "https://restockdex-production.up.railway.app";
 
 function App() {
+  const products = [
+    "Booster Packs",
+    "Booster Bundles",
+    "Booster Boxes",
+    "Elite Trainer Boxes",
+    "Tins",
+    "Collections",
+    "Pokémon Center Drops",
+  ];
+
   const [liveData, setLiveData] = useState([]);
   const [trafficData, setTrafficData] = useState(null);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [postcode, setPostcode] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showTrafficAlert, setShowTrafficAlert] = useState(false);
 
   const alertedRef = useRef(false);
@@ -43,7 +56,9 @@ function App() {
 
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.6);
-    } catch {}
+    } catch (error) {
+      console.error("Sound error:", error);
+    }
   }
 
   async function fetchStock() {
@@ -51,7 +66,9 @@ function App() {
       const res = await fetch(`${API_URL}/stock`);
       const data = await res.json();
       setLiveData(data);
-    } catch {}
+    } catch (error) {
+      console.error("Stock error:", error);
+    }
   }
 
   async function fetchTraffic() {
@@ -62,32 +79,58 @@ function App() {
 
       setTrafficData(traffic);
 
-      const high =
+      const highTraffic =
         traffic?.stock?.includes("POSSIBLE DROP") ||
         traffic?.stock?.includes("HIGH TRAFFIC");
 
-      if (high && !alertedRef.current) {
+      if (highTraffic && !alertedRef.current) {
         alertedRef.current = true;
         setShowTrafficAlert(true);
         playAlertSound();
 
-        setTimeout(() => setShowTrafficAlert(false), 12000);
+        setTimeout(() => {
+          setShowTrafficAlert(false);
+        }, 12000);
       }
 
-      if (!high) alertedRef.current = false;
-    } catch {}
+      if (!highTraffic) {
+        alertedRef.current = false;
+      }
+    } catch (error) {
+      console.error("Traffic error:", error);
+    }
   }
 
-  const isHigh =
+  function toggleProduct(product) {
+    setSelectedProducts((current) =>
+      current.includes(product)
+        ? current.filter((p) => p !== product)
+        : [...current, product]
+    );
+  }
+
+  const isHighTraffic =
     trafficData?.stock?.includes("POSSIBLE DROP") ||
     trafficData?.stock?.includes("HIGH TRAFFIC");
+
+  const filteredLiveData =
+    selectedProducts.length === 0
+      ? liveData
+      : liveData.filter((item) =>
+          selectedProducts.some(
+            (product) =>
+              item.product?.toLowerCase().includes(product.toLowerCase()) ||
+              item.store?.toLowerCase().includes(product.toLowerCase())
+          )
+        );
 
   return (
     <div className="page">
       {showTrafficAlert && (
         <div className="trafficPopup">
           <h3>🚨 Pokémon Center Traffic Spike</h3>
-          <p>Possible drop detected — check now.</p>
+          <p>Possible drop or queue detected. Check Pokémon Center now.</p>
+
           <a
             href="https://www.pokemoncenter.com/en-gb/category/new-releases"
             target="_blank"
@@ -95,32 +138,57 @@ function App() {
           >
             Open Pokémon Center
           </a>
+
+          <button
+            className="popupClose"
+            onClick={() => setShowTrafficAlert(false)}
+          >
+            Close
+          </button>
         </div>
       )}
 
       <div className="app">
-
-        {/* 🔥 NEW LOGO */}
         <div className="logoContainer">
           <img src={logo} alt="RestockDex" className="logoImg" />
         </div>
 
-        <section className="panel">
-          <h2>Pokémon Center Traffic</h2>
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">UK Pokémon TCG Drop Monitor</p>
+            <p className="subtitle">
+              Live Pokémon drops, store tracking and Pokémon Center traffic alerts.
+            </p>
+          </div>
 
-          <div className={`trafficCard ${isHigh ? "high" : "low"}`}>
+          <div className="statusBox">
+            <span className="statusDot"></span>
+            Live
+          </div>
+        </header>
+
+        <section className="panel trafficPanel">
+          <div className="panelHeader centeredHeader">
+            <h2>Pokémon Center Traffic</h2>
+
+            <span className={isHighTraffic ? "pill danger" : "pill success"}>
+              {isHighTraffic ? "High Traffic" : "Low Traffic"}
+            </span>
+          </div>
+
+          <div className={`trafficCard centered ${isHighTraffic ? "high" : "low"}`}>
             <h3>
               {!trafficData
-                ? "🟡 Starting"
-                : isHigh
+                ? "🟡 Monitor Starting"
+                : isHighTraffic
                 ? "🚨 Possible Drop"
-                : "🟢 Normal"}
+                : "🟢 Normal Activity"}
             </h3>
 
-            <p>
+            <p className="trafficText">
               {trafficData
                 ? trafficData.stock
-                : "Checking every 60 seconds"}
+                : "Monitor active — checking every 60 seconds"}
             </p>
 
             <a
@@ -134,21 +202,82 @@ function App() {
         </section>
 
         <section className="panel">
-          <h2>Live Drops</h2>
+          <h2>Filters</h2>
 
-          {liveData.map((item, i) => (
-            <div key={i} className="dropCard">
-              <div>
-                <span className="store">{item.store}</span>
-                <h3>{item.product}</h3>
-                <span className="pill">{item.stock}</span>
+          <input
+            className="input"
+            placeholder="Postcode e.g. OX4 2AB"
+            value={postcode}
+            onChange={(e) => setPostcode(e.target.value.toUpperCase())}
+          />
+
+          <div className="dropdown">
+            <button
+              className="dropdownButton"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            >
+              Select Products {dropdownOpen ? "▲" : "▼"}
+            </button>
+
+            {dropdownOpen && (
+              <div className="dropdownMenu">
+                {products.map((product) => (
+                  <label key={product} className="dropdownItem">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.includes(product)}
+                      onChange={() => toggleProduct(product)}
+                    />
+                    {product}
+                  </label>
+                ))}
               </div>
+            )}
+          </div>
 
-              <a href={item.link} target="_blank" className="viewButton">
-                View
-              </a>
-            </div>
-          ))}
+          <div className="chips">
+            {selectedProducts.length === 0 ? (
+              <span className="emptyChip">No filters selected</span>
+            ) : (
+              selectedProducts.map((product) => (
+                <span className="chip" key={product}>
+                  {product}
+                </span>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panelHeader">
+            <h2>Live Drops</h2>
+            <span className="countBadge">{filteredLiveData.length} items</span>
+          </div>
+
+          <div className="dropList">
+            {filteredLiveData.map((item, index) => {
+              const isNew = item.stock?.includes("NEW DROP");
+
+              return (
+                <div
+                  key={index}
+                  className={isNew ? "dropCard newDrop" : "dropCard"}
+                >
+                  <div>
+                    <span className="store">{item.store}</span>
+                    <h3>{item.product}</h3>
+                    <span className={isNew ? "pill danger" : "pill neutral"}>
+                      {item.stock}
+                    </span>
+                  </div>
+
+                  <a href={item.link} target="_blank" className="viewButton">
+                    View
+                  </a>
+                </div>
+              );
+            })}
+          </div>
         </section>
       </div>
     </div>

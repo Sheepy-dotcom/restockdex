@@ -1,119 +1,315 @@
-/* 🌑 BASE */
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
-  background: #050505;
-  color: #fff;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(255, 0, 0, 0.18), transparent 22%),
+    radial-gradient(circle at 85% 20%, rgba(255, 215, 0, 0.14), transparent 25%),
+    linear-gradient(135deg, #030303, #111111, #050505);
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, transparent 58%, rgba(255,255,255,0.06) 59%, rgba(255,255,255,0.06) 61%, transparent 62%),
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 180px 180px, 40px 40px, 40px 40px;
+  pointer-events: none;
+  opacity: 0.45;
 }
 
 .page {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
+  min-height: 100vh;
+  padding: 22px;
+  position: relative;
+  z-index: 1;
 }
 
 .app {
   width: 100%;
-  max-width: 480px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-/* 🔥 LOGO */
 .logoContainer {
   display: flex;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .logoImg {
-  width: 320px;
-  max-width: 95%;
+  width: 420px;
+  max-width: 96%;
   height: auto;
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.18));
 }
 
-/* 📦 PANELS */
+.topbar,
 .panel {
-  background: #0d0d0d;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(8, 8, 8, 0.86);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 215, 0, 0.22);
+  border-radius: 24px;
+  padding: 22px;
+  margin-bottom: 18px;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.45);
 }
 
-/* 📊 TRAFFIC */
-.trafficCard {
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #ffd700;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 0;
+  color: #cfcfcf;
+  line-height: 1.5;
+}
+
+.statusBox,
+.countBadge {
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.45);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.statusDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.centeredHeader {
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+h3 {
+  margin: 0 0 8px;
+}
+
+.trafficPanel {
   text-align: center;
-  padding: 16px;
-  border-radius: 14px;
+}
+
+.trafficCard {
+  padding: 18px;
+  border-radius: 18px;
   margin-top: 10px;
   transition: 0.3s;
 }
 
 .trafficCard.low {
-  background: #0f172a;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: rgba(20, 83, 45, 0.28);
+  border: 1px solid rgba(34, 197, 94, 0.45);
 }
 
 .trafficCard.high {
-  background: #3f0b0b;
+  background: rgba(127, 29, 29, 0.36);
   border: 1px solid rgba(239, 68, 68, 0.6);
-  animation: pulse 1.5s infinite;
+  animation: pulseAlert 1.5s infinite;
 }
 
-/* 🔁 pulse animation */
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0px rgba(239, 68, 68, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
-  }
-  100% {
-    box-shadow: 0 0 0px rgba(239, 68, 68, 0.4);
-  }
+.centered {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
 }
 
-/* 📋 DROPS */
-.dropCard {
-  background: #0f0f0f;
-  border-radius: 14px;
+.trafficText {
+  color: #d0d0d0;
+  max-width: 340px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.input {
+  width: 100%;
   padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 215, 0, 0.45);
+  background: #050505;
+  color: white;
+  font-size: 15px;
   margin-bottom: 12px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #ffd700;
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.12);
+}
+
+.dropdownButton {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #ffd700, #c99700);
+  color: #050505;
+  font-weight: 900;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+}
+
+.dropdownMenu {
+  margin-top: 10px;
+  background: #050505;
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.dropdownItem {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #1d1d1d;
+  cursor: pointer;
+}
+
+.dropdownItem:hover {
+  background: #141414;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.chip,
+.emptyChip {
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.chip {
+  background: rgba(255, 215, 0, 0.14);
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.35);
+}
+
+.emptyChip {
+  background: #121212;
+  color: #999;
+}
+
+.dropList {
+  display: grid;
+  gap: 12px;
+}
+
+.dropCard {
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 18px;
+  padding: 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dropCard.newDrop {
+  border-color: rgba(239, 68, 68, 0.75);
+  background: linear-gradient(135deg, rgba(127, 29, 29, 0.35), rgba(0, 0, 0, 0.75));
 }
 
 .store {
   font-size: 12px;
-  color: #aaa;
+  color: #ffd700;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .dropCard h3 {
-  margin: 4px 0;
+  margin: 4px 0 8px;
   font-size: 16px;
 }
 
-/* 🟡 STATUS PILL */
 .pill {
+  display: inline-block;
+  width: fit-content;
   font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 10px;
-  background: #222;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 900;
 }
 
-/* 🔗 BUTTON */
+.pill.success {
+  background: rgba(34, 197, 94, 0.16);
+  color: #4ade80;
+}
+
+.pill.danger {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+}
+
+.pill.neutral {
+  background: rgba(255, 215, 0, 0.14);
+  color: #ffd700;
+}
+
 .viewButton {
   background: #ffd700;
   color: #050505;
   text-decoration: none;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-weight: bold;
-  font-size: 14px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-/* 🚨 POPUP ALERT */
+.viewButton:hover {
+  background: #ffffff;
+}
+
 .trafficPopup {
   position: fixed;
   top: 20px;
@@ -124,6 +320,7 @@ body {
   max-width: 420px;
   background: linear-gradient(135deg, #7f1d1d, #050505);
   border: 1px solid rgba(239, 68, 68, 0.8);
+  color: white;
   padding: 18px;
   border-radius: 18px;
   text-align: center;
@@ -136,8 +333,8 @@ body {
 }
 
 .trafficPopup p {
-  margin-bottom: 12px;
   color: #f3d1d1;
+  margin-bottom: 14px;
 }
 
 .popupButton {
@@ -147,10 +344,31 @@ body {
   text-decoration: none;
   padding: 12px;
   border-radius: 12px;
-  font-weight: bold;
+  font-weight: 900;
+  margin-bottom: 10px;
 }
 
-/* 🎬 popup animation */
+.popupClose {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+@keyframes pulseAlert {
+  0% {
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(239, 68, 68, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0.2);
+  }
+}
+
 @keyframes popupDrop {
   from {
     opacity: 0;
@@ -159,5 +377,26 @@ body {
   to {
     opacity: 1;
     transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 14px;
+  }
+
+  .topbar,
+  .dropCard {
+    display: block;
+  }
+
+  .statusBox,
+  .viewButton {
+    display: inline-block;
+    margin-top: 14px;
+  }
+
+  .logoImg {
+    width: 360px;
   }
 }
