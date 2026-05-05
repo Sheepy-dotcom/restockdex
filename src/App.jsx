@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
+import logo from "./assets/restockdex-logo.png";
 
 const API_URL = "https://restockdex-production.up.railway.app";
 
@@ -42,7 +43,7 @@ function App() {
 
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.6);
-    } catch (err) {}
+    } catch {}
   }
 
   async function fetchStock() {
@@ -50,7 +51,7 @@ function App() {
       const res = await fetch(`${API_URL}/stock`);
       const data = await res.json();
       setLiveData(data);
-    } catch (error) {}
+    } catch {}
   }
 
   async function fetchTraffic() {
@@ -74,7 +75,7 @@ function App() {
       }
 
       if (!high) alertedRef.current = false;
-    } catch (error) {}
+    } catch {}
   }
 
   const isHigh =
@@ -99,9 +100,9 @@ function App() {
 
       <div className="app">
 
-        {/* TEXT TITLE INSTEAD */}
+        {/* 🔥 NEW LOGO */}
         <div className="logoContainer">
-          <h1 className="textLogo">RestockDex</h1>
+          <img src={logo} alt="RestockDex" className="logoImg" />
         </div>
 
         <section className="panel">
