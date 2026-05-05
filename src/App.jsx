@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+ import { useEffect, useState } from "react";
 import "./App.css";
 
 const API_URL = "https://restockdex-production.up.railway.app";
@@ -17,7 +17,12 @@ function App() {
   const [liveData, setLiveData] = useState([]);
   const [trafficData, setTrafficData] = useState(null);
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const [postcode, setPostcode] = useState("");
+  const [postcode, setPostcode] = useState(
+    localStorage.getItem("restockdex_postcode") || ""
+  );
+  const [savedPostcode, setSavedPostcode] = useState(
+    localStorage.getItem("restockdex_postcode") || ""
+  );
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
@@ -50,6 +55,21 @@ function App() {
     } catch (error) {
       console.error("Traffic error:", error);
     }
+  }
+
+  function savePostcode() {
+    if (!postcode.trim()) {
+      alert("Please enter a postcode.");
+      return;
+    }
+
+    const formattedPostcode = postcode.trim().toUpperCase();
+
+    localStorage.setItem("restockdex_postcode", formattedPostcode);
+    setPostcode(formattedPostcode);
+    setSavedPostcode(formattedPostcode);
+
+    alert(`Postcode saved: ${formattedPostcode}`);
   }
 
   function toggleProduct(product) {
@@ -126,6 +146,16 @@ function App() {
             value={postcode}
             onChange={(e) => setPostcode(e.target.value.toUpperCase())}
           />
+
+          <button className="saveButton" onClick={savePostcode}>
+            Save Postcode
+          </button>
+
+          {savedPostcode && (
+            <p className="savedPostcode">
+              Tracking near: <strong>{savedPostcode}</strong>
+            </p>
+          )}
 
           <div className="dropdown">
             <button
