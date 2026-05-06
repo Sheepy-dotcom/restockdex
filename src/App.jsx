@@ -12,6 +12,10 @@ const SHOP_LINKS = [
     link: "https://www.argos.co.uk/search/pokemon-cards/",
   },
   {
+    name: "Amazon UK",
+    link: "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys",
+  },
+  {
     name: "Smyths Toys",
     link: "https://www.smythstoys.com/uk/en-gb/brand/pokemon/pokemon-trading-card-game/c/SM0601011202",
   },
@@ -25,6 +29,7 @@ const STORE_ORDER = [
   "The Card Vault",
   "Magic Madhouse",
   "Argos",
+  "Amazon UK",
   "Chaos Cards",
   "Smyths Toys",
 ];
@@ -90,7 +95,8 @@ function App() {
           <div className="heroText">
             <p>
               Live Pokemon stock checks for Magic Madhouse, The Card Vault,
-              Chaos Cards, Argos, Smyths Toys, and Pokemon Center traffic.
+              Chaos Cards, Argos, Amazon UK, Smyths Toys, and Pokemon Center
+              traffic.
             </p>
           </div>
 
@@ -200,20 +206,27 @@ function StatCard({ label, value }) {
 function StoreSection({ store, items, status, loading }) {
   const hasItems = items.length > 0;
   const hasError = status?.status === "error";
+  const needsSetup = status?.status === "setup_needed";
   const statusLabel = loading
     ? "Checking"
+    : needsSetup
+    ? "API needed"
     : hasError
     ? "Blocked"
     : "Online";
   const emptyMessage = loading
     ? "Checking stock..."
+    : needsSetup
+    ? "Automatic alerts need official Amazon API credentials."
     : hasError
     ? "This shop blocked the automatic check. Use the manual link below."
     : "No confirmed in-stock drops right now.";
 
   return (
     <details
-      className={`storeSection ${hasItems ? "hasDrops" : ""} ${hasError ? "hasError" : ""}`}
+      className={`storeSection ${hasItems ? "hasDrops" : ""} ${
+        hasError || needsSetup ? "hasError" : ""
+      }`}
       open={hasItems}
     >
       <summary className="storeHeader">
@@ -223,7 +236,7 @@ function StoreSection({ store, items, status, loading }) {
         </div>
         <span
           className={`shopStatus ${
-            hasError ? "error" : loading ? "checking" : "online"
+            hasError || needsSetup ? "error" : loading ? "checking" : "online"
           }`}
         >
           {statusLabel}
@@ -234,7 +247,9 @@ function StoreSection({ store, items, status, loading }) {
       </summary>
 
       {items.length === 0 && (
-        <p className={hasError ? "emptyText error" : "emptyText"}>{emptyMessage}</p>
+        <p className={hasError || needsSetup ? "emptyText error" : "emptyText"}>
+          {emptyMessage}
+        </p>
       )}
 
       <div className="dropList">

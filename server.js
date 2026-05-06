@@ -19,6 +19,9 @@ const CHAOS_CARDS_URL =
 const ARGOS_URL =
   "https://www.argos.co.uk/search/pokemon-cards/";
 
+const AMAZON_URL =
+  "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys";
+
 const SMYTHS_URL =
   "https://www.smythstoys.com/uk/en-gb/brand/pokemon/pokemon-trading-card-game/c/SM0601011202";
 
@@ -75,6 +78,12 @@ let cachedShopStatus = [];
 let seenLinks = new Set();
 let seenLinksPrimed = false;
 let lastUpdated = null;
+
+function setupNeeded(message) {
+  const error = new Error(message);
+  error.code = "SETUP_NEEDED";
+  return error;
+}
 
 function matchesKeyword(text) {
   const lower = text.toLowerCase();
@@ -313,6 +322,12 @@ async function getSmythsProducts() {
   return products.slice(0, 20);
 }
 
+async function getAmazonProducts() {
+  throw setupNeeded(
+    "Amazon automatic alerts need official Product Advertising API or Creators API credentials"
+  );
+}
+
 async function refreshProducts() {
   try {
     console.log("Refreshing product drops...");
@@ -322,6 +337,7 @@ async function refreshProducts() {
       ["Magic Madhouse", getMagicMadhouseProducts],
       ["Chaos Cards", getChaosCardsProducts],
       ["Argos", getArgosProducts],
+      ["Amazon UK", getAmazonProducts],
       ["Smyths Toys", getSmythsProducts],
     ];
 
@@ -344,7 +360,8 @@ async function refreshProducts() {
 
       return {
         store,
-        status: "error",
+        status:
+          result.reason?.code === "SETUP_NEEDED" ? "setup_needed" : "error",
         count: 0,
         error: result.reason?.message || "Shop check failed",
         checkedAt: new Date().toISOString(),
