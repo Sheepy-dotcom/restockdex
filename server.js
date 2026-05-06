@@ -235,7 +235,9 @@ async function refreshPokemonCenterTraffic() {
     );
 
     const trafficHigh =
-      status !== 200 || responseTime > 4000 || detectedSignals.length > 0;
+  status !== 200 ||
+  responseTime > 6000 ||
+  detectedSignals.length >= 2;
 
     cachedTraffic = [
       {

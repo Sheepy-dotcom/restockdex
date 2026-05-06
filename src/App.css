@@ -399,4 +399,22 @@ h3 {
   .logoImg {
     width: 360px;
   }
+}.keywordDrop {
+  border: 2px solid gold;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+}
+
+.newDrop {
+  border: 2px solid red;
+}
+
+.badges {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.pill.gold {
+  background: gold;
+  color: black;
 }
