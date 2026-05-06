@@ -13,7 +13,7 @@ const SHOP_LINKS = [
   },
   {
     name: "Smyths Toys",
-    link: "https://www.smythstoys.com/uk/en-gb/search/?text=pokemon",
+    link: "https://www.smythstoys.com/uk/en-gb/brand/pokemon/pokemon-trading-card-game/c/SM0601011202",
   },
   {
     name: "Chaos Cards",
@@ -32,6 +32,7 @@ const STORE_ORDER = [
 function App() {
   const [liveData, setLiveData] = useState([]);
   const [trafficData, setTrafficData] = useState(null);
+  const [shopStatus, setShopStatus] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [error, setError] = useState("");
@@ -46,16 +47,19 @@ function App() {
     try {
       setError("");
 
-      const [stockRes, trafficRes] = await Promise.all([
+      const [stockRes, trafficRes, statusRes] = await Promise.all([
         fetch(`${API_URL}/stock`),
         fetch(`${API_URL}/pokemon-center-traffic`),
+        fetch(`${API_URL}/status`),
       ]);
 
       const stock = await stockRes.json();
       const traffic = await trafficRes.json();
+      const status = await statusRes.json();
 
       setLiveData(Array.isArray(stock) ? stock : []);
       setTrafficData(Array.isArray(traffic) ? traffic[0] : null);
+      setShopStatus(Array.isArray(status?.shops) ? status.shops : []);
       setLastUpdated(new Date());
     } catch (err) {
       console.error("RestockDex fetch failed:", err);
@@ -69,8 +73,9 @@ function App() {
     return STORE_ORDER.map((store) => ({
       store,
       items: liveData.filter((item) => item.store?.includes(store)),
+      status: shopStatus.find((shop) => shop.store === store),
     }));
-  }, [liveData]);
+  }, [liveData, shopStatus]);
 
   const newDrops = liveData.filter((item) => item.stock?.includes("NEW"));
   const hotDrops = liveData.filter((item) => item.alert?.includes("KEYWORD"));
@@ -144,11 +149,12 @@ function App() {
           </div>
 
           <div className="shopGrid">
-            {groupedStores.map(({ store, items }) => (
+            {groupedStores.map(({ store, items, status }) => (
               <StoreSection
                 key={store}
                 store={store}
                 items={items}
+                status={status}
                 loading={loading}
               />
             ))}
@@ -191,25 +197,44 @@ function StatCard({ label, value }) {
   );
 }
 
-function StoreSection({ store, items, loading }) {
+function StoreSection({ store, items, status, loading }) {
   const hasItems = items.length > 0;
+  const hasError = status?.status === "error";
+  const statusLabel = loading
+    ? "Checking"
+    : hasError
+    ? "Blocked"
+    : "Online";
+  const emptyMessage = loading
+    ? "Checking stock..."
+    : hasError
+    ? "This shop blocked the automatic check. Use the manual link below."
+    : "No confirmed in-stock drops right now.";
 
   return (
-    <details className={`storeSection ${hasItems ? "hasDrops" : ""}`} open={hasItems}>
+    <details
+      className={`storeSection ${hasItems ? "hasDrops" : ""} ${hasError ? "hasError" : ""}`}
+      open={hasItems}
+    >
       <summary className="storeHeader">
         <div>
-          <p className="storeKicker">Shop monitor</p>
+          <p className="storeKicker">{statusLabel}</p>
           <h3>{store}</h3>
         </div>
+        <span
+          className={`shopStatus ${
+            hasError ? "error" : loading ? "checking" : "online"
+          }`}
+        >
+          {statusLabel}
+        </span>
         <span className={hasItems ? "shopCount active" : "shopCount"}>
           {items.length} found
         </span>
       </summary>
 
       {items.length === 0 && (
-        <p className="emptyText">
-          {loading ? "Checking stock..." : "No tracked drops right now."}
-        </p>
+        <p className={hasError ? "emptyText error" : "emptyText"}>{emptyMessage}</p>
       )}
 
       <div className="dropList">

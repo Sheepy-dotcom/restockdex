@@ -308,6 +308,10 @@ h3 {
   border-color: rgba(255, 213, 36, 0.36);
 }
 
+.storeSection.hasError {
+  border-color: rgba(252, 165, 165, 0.3);
+}
+
 .storeHeader {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -355,7 +359,8 @@ h3 {
   text-transform: uppercase;
 }
 
-.shopCount {
+.shopCount,
+.shopStatus {
   display: inline-flex;
   align-items: center;
   padding: 7px 9px;
@@ -374,6 +379,24 @@ h3 {
   border-color: #ffd524;
 }
 
+.shopStatus.online {
+  color: #c8ff7a;
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(134, 239, 172, 0.42);
+}
+
+.shopStatus.checking {
+  color: #fff4b8;
+  background: rgba(255, 213, 36, 0.12);
+  border-color: rgba(255, 213, 36, 0.38);
+}
+
+.shopStatus.error {
+  color: #fecaca;
+  background: rgba(229, 42, 42, 0.16);
+  border-color: rgba(252, 165, 165, 0.5);
+}
+
 .storeHeader span:not(.shopCount) {
   color: #9fb9d5;
   font-size: 13px;
@@ -388,6 +411,11 @@ h3 {
   border-radius: 8px;
   color: #9fb9d5;
   background: rgba(255, 255, 255, 0.05);
+}
+
+.emptyText.error {
+  color: #fecaca;
+  background: rgba(229, 42, 42, 0.12);
 }
 
 .dropList {

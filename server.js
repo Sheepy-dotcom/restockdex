@@ -20,7 +20,7 @@ const ARGOS_URL =
   "https://www.argos.co.uk/search/pokemon-cards/";
 
 const SMYTHS_URL =
-  "https://www.smythstoys.com/uk/en-gb/search/?text=pokemon%20cards";
+  "https://www.smythstoys.com/uk/en-gb/brand/pokemon/pokemon-trading-card-game/c/SM0601011202";
 
 const POKEMON_CENTER_URL =
   "https://www.pokemoncenter.com/en-gb/category/new-releases";
@@ -73,6 +73,7 @@ let cachedTraffic = [
 
 let cachedShopStatus = [];
 let seenLinks = new Set();
+let seenLinksPrimed = false;
 let lastUpdated = null;
 
 function matchesKeyword(text) {
@@ -112,6 +113,16 @@ function absoluteUrl(href, baseUrl) {
 
 function cleanProductName(text) {
   return text.replace(/\s+/g, " ").trim();
+}
+
+function isChallengePage(html) {
+  const lower = html.toLowerCase();
+  return (
+    lower.includes("pardon our interruption") ||
+    lower.includes("captcha") ||
+    lower.includes("access denied") ||
+    lower.includes("are you a robot")
+  );
 }
 
 function addUniqueProduct(products, product) {
@@ -274,6 +285,9 @@ async function getArgosProducts() {
 async function getSmythsProducts() {
   const { status, html } = await fetchWithTimeout(SMYTHS_URL);
   if (status !== 200) throw new Error(`Smyths Toys returned ${status}`);
+  if (isChallengePage(html)) {
+    throw new Error("Smyths Toys anti-bot challenge");
+  }
 
   const $ = cheerio.load(html);
   const products = [];
@@ -354,15 +368,20 @@ async function refreshProducts() {
       return;
     }
 
+    if (!seenLinksPrimed) {
+      products.forEach((product) => seenLinks.add(product.link));
+      seenLinksPrimed = true;
+    }
+
     cachedProducts = products.map((product) => {
       const isNew = !seenLinks.has(product.link);
       const keywordMatch = matchesKeyword(product.product);
 
       seenLinks.add(product.link);
 
-    return {
+      return {
         ...product,
-        stock: isNew ? "NEW IN STOCK 🚨" : product.availability || "In stock",
+        stock: isNew ? "NEW PRODUCT DROP 🚨" : product.availability || "In stock",
         alert:
           isNew && keywordMatch
             ? "KEYWORD ALERT 🔥"
