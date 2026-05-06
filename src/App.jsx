@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import logo from "./assets/restockdex-logo.png";
+import pokemonCenterLogo from "./assets/pokemon-center-white.png";
 
 const API_URL =
   import.meta.env.VITE_API_URL || "https://restockdex-production.up.railway.app";
@@ -82,7 +83,6 @@ function App() {
           <img src={logo} className="logoImg" alt="RestockDex" />
 
           <div className="heroText">
-            <h1>RestockDex</h1>
             <p>
               Live Pokemon stock checks for Magic Madhouse, The Card Vault,
               Chaos Cards, Argos, Smyths Toys, and Pokemon Center traffic.
@@ -94,17 +94,15 @@ function App() {
           </button>
         </header>
 
-        <section className="statsGrid">
-          <StatCard label="Products tracked" value={liveData.length} />
-          <StatCard label="New drops" value={newDrops.length} />
-          <StatCard label="Hot matches" value={hotDrops.length} />
-        </section>
-
-        <section className="panel">
-          <div className="panelHeader">
+        <section className="panel trafficPanel">
+          <div className="trafficHeader">
+            <img
+              src={pokemonCenterLogo}
+              className="pokemonCenterLogo"
+              alt="Pokemon Center"
+            />
             <div>
               <p className="eyebrow">Traffic alert</p>
-              <h2>Pokemon Center UK</h2>
             </div>
             <span className={highTraffic ? "statusBadge danger" : "statusBadge"}>
               {highTraffic ? "High traffic" : "Normal"}
@@ -117,7 +115,14 @@ function App() {
               Status: {trafficData?.httpStatus || "Checking"} | Response:{" "}
               {trafficData?.responseTime || "Checking"}
             </p>
+            <span className="refreshNote">Refreshes automatically every 60 seconds</span>
           </div>
+        </section>
+
+        <section className="statsGrid">
+          <StatCard label="Products tracked" value={liveData.length} />
+          <StatCard label="New drops" value={newDrops.length} />
+          <StatCard label="Hot matches" value={hotDrops.length} />
         </section>
 
         {error && <div className="errorBox">{error}</div>}
