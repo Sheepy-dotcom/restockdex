@@ -24,8 +24,8 @@ const SHOP_LINKS = [
 const STORE_ORDER = [
   "The Card Vault",
   "Magic Madhouse",
-  "Chaos Cards",
   "Argos",
+  "Chaos Cards",
   "Smyths Toys",
 ];
 
@@ -127,8 +127,8 @@ function App() {
 
         {error && <div className="errorBox">{error}</div>}
 
-        <section className="panel">
-          <div className="panelHeader">
+        <section className="feedPanel">
+          <div className="feedHeader">
             <div>
               <p className="eyebrow">Live feed</p>
               <h2>Shop drops</h2>
@@ -143,14 +143,16 @@ function App() {
             </span>
           </div>
 
-          {groupedStores.map(({ store, items }) => (
-            <StoreSection
-              key={store}
-              store={store}
-              items={items}
-              loading={loading}
-            />
-          ))}
+          <div className="shopGrid">
+            {groupedStores.map(({ store, items }) => (
+              <StoreSection
+                key={store}
+                store={store}
+                items={items}
+                loading={loading}
+              />
+            ))}
+          </div>
         </section>
 
         <section className="panel">
@@ -190,12 +192,19 @@ function StatCard({ label, value }) {
 }
 
 function StoreSection({ store, items, loading }) {
+  const hasItems = items.length > 0;
+
   return (
-    <div className="storeSection">
-      <div className="storeHeader">
-        <h3>{store}</h3>
-        <span>{items.length} found</span>
-      </div>
+    <details className={`storeSection ${hasItems ? "hasDrops" : ""}`} open={hasItems}>
+      <summary className="storeHeader">
+        <div>
+          <p className="storeKicker">Shop monitor</p>
+          <h3>{store}</h3>
+        </div>
+        <span className={hasItems ? "shopCount active" : "shopCount"}>
+          {items.length} found
+        </span>
+      </summary>
 
       {items.length === 0 && (
         <p className="emptyText">
@@ -208,7 +217,7 @@ function StoreSection({ store, items, loading }) {
           <DropCard key={`${item.store}-${item.product}-${index}`} item={item} />
         ))}
       </div>
-    </div>
+    </details>
   );
 }
 

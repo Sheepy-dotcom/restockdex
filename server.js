@@ -13,6 +13,15 @@ const CARD_VAULT_URL =
 const MAGIC_MADHOUSE_URL =
   "https://magicmadhouse.co.uk/pokemon/pokemon-sets/phantasmal-flames";
 
+const CHAOS_CARDS_URL =
+  "https://www.chaoscards.co.uk/shop/card-games/pokemon";
+
+const ARGOS_URL =
+  "https://www.argos.co.uk/search/pokemon-cards/";
+
+const SMYTHS_URL =
+  "https://www.smythstoys.com/uk/en-gb/search/?text=pokemon%20cards";
+
 const POKEMON_CENTER_URL =
   "https://www.pokemoncenter.com/en-gb/category/new-releases";
 
@@ -62,6 +71,7 @@ let cachedTraffic = [
   },
 ];
 
+let cachedShopStatus = [];
 let seenLinks = new Set();
 let lastUpdated = null;
 
@@ -90,6 +100,23 @@ async function fetchWithTimeout(url, timeout = 8000) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+function absoluteUrl(href, baseUrl) {
+  try {
+    return new URL(href, baseUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
+function cleanProductName(text) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function addUniqueProduct(products, product) {
+  if (!product.link || products.some((p) => p.link === product.link)) return;
+  products.push(product);
 }
 
 async function getCardVaultProducts() {
@@ -159,14 +186,126 @@ async function getMagicMadhouseProducts() {
   return products.slice(0, 15);
 }
 
+async function getChaosCardsProducts() {
+  const { status, html } = await fetchWithTimeout(CHAOS_CARDS_URL);
+  if (status !== 200) throw new Error(`Chaos Cards returned ${status}`);
+
+  const $ = cheerio.load(html);
+  const products = [];
+
+  $("a").each((_, el) => {
+    const productName = cleanProductName($(el).text());
+    const href = $(el).attr("href");
+    const link = href ? absoluteUrl(href, CHAOS_CARDS_URL) : null;
+
+    if (!productName || !link) return;
+    if (!link.includes("chaoscards.co.uk")) return;
+    if (!link.includes("/products/")) return;
+    if (!productName.toLowerCase().includes("pokemon")) return;
+    if (!matchesKeyword(`${productName} ${link}`)) return;
+
+    addUniqueProduct(products, {
+      product: productName,
+      store: "Chaos Cards",
+      link,
+    });
+  });
+
+  return products.slice(0, 20);
+}
+
+async function getArgosProducts() {
+  const { status, html } = await fetchWithTimeout(ARGOS_URL);
+  if (status !== 200) throw new Error(`Argos returned ${status}`);
+
+  const $ = cheerio.load(html);
+  const products = [];
+
+  $("a").each((_, el) => {
+    const productName = cleanProductName($(el).text());
+    const href = $(el).attr("href");
+    const link = href ? absoluteUrl(href, ARGOS_URL) : null;
+
+    if (!productName || !link) return;
+    if (!link.includes("argos.co.uk/product/")) return;
+    if (!productName.toLowerCase().includes("pok")) return;
+    if (!matchesKeyword(`${productName} ${link}`)) return;
+
+    addUniqueProduct(products, {
+      product: productName,
+      store: "Argos",
+      link,
+    });
+  });
+
+  return products.slice(0, 25);
+}
+
+async function getSmythsProducts() {
+  const { status, html } = await fetchWithTimeout(SMYTHS_URL);
+  if (status !== 200) throw new Error(`Smyths Toys returned ${status}`);
+
+  const $ = cheerio.load(html);
+  const products = [];
+
+  $("a").each((_, el) => {
+    const productName = cleanProductName($(el).text());
+    const href = $(el).attr("href");
+    const link = href ? absoluteUrl(href, SMYTHS_URL) : null;
+
+    if (!productName || !link) return;
+    if (!link.includes("smythstoys.com")) return;
+    if (!link.includes("/p/") && !link.includes("/product/")) return;
+    if (!productName.toLowerCase().includes("pok")) return;
+    if (!matchesKeyword(`${productName} ${link}`)) return;
+
+    addUniqueProduct(products, {
+      product: productName,
+      store: "Smyths Toys",
+      link,
+    });
+  });
+
+  return products.slice(0, 20);
+}
+
 async function refreshProducts() {
   try {
     console.log("Refreshing product drops...");
 
-    const results = await Promise.allSettled([
-      getCardVaultProducts(),
-      getMagicMadhouseProducts(),
-    ]);
+    const shopChecks = [
+      ["The Card Vault", getCardVaultProducts],
+      ["Magic Madhouse", getMagicMadhouseProducts],
+      ["Chaos Cards", getChaosCardsProducts],
+      ["Argos", getArgosProducts],
+      ["Smyths Toys", getSmythsProducts],
+    ];
+
+    const results = await Promise.allSettled(
+      shopChecks.map(([, checkProducts]) => checkProducts())
+    );
+
+    cachedShopStatus = results.map((result, index) => {
+      const [store] = shopChecks[index];
+
+      if (result.status === "fulfilled") {
+        return {
+          store,
+          status: "online",
+          count: result.value.length,
+          error: null,
+          checkedAt: new Date().toISOString(),
+        };
+      }
+
+      return {
+        store,
+        status: "error",
+        count: 0,
+        error: result.reason?.message || "Shop check failed",
+        checkedAt: new Date().toISOString(),
+      };
+    });
 
     const products = results.flatMap((result) =>
       result.status === "fulfilled" ? result.value : []
@@ -235,9 +374,9 @@ async function refreshPokemonCenterTraffic() {
     );
 
     const trafficHigh =
-  status !== 200 ||
-  responseTime > 6000 ||
-  detectedSignals.length >= 2;
+      status !== 200 ||
+      responseTime > 6000 ||
+      detectedSignals.length >= 2;
 
     cachedTraffic = [
       {
@@ -287,6 +426,21 @@ app.get("/test", (req, res) => {
   res.json({
     status: "API working",
     lastUpdated,
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    lastUpdated,
+  });
+});
+
+app.get("/status", (req, res) => {
+  res.json({
+    lastUpdated,
+    shops: cachedShopStatus,
+    traffic: cachedTraffic[0],
   });
 });
 
