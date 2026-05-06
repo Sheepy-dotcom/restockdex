@@ -25,6 +25,21 @@ const SHOP_LINKS = [
   },
 ];
 
+const AMAZON_NEW_LINKS = [
+  {
+    name: "Newest Pokemon TCG",
+    link: "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys&s=date-desc-rank",
+  },
+  {
+    name: "Booster bundles",
+    link: "https://www.amazon.co.uk/s?k=pokemon+booster+bundle&i=toys&s=date-desc-rank",
+  },
+  {
+    name: "Elite trainer boxes",
+    link: "https://www.amazon.co.uk/s?k=pokemon+elite+trainer+box&i=toys&s=date-desc-rank",
+  },
+];
+
 const STORE_ORDER = [
   "The Card Vault",
   "Magic Madhouse",
@@ -163,6 +178,30 @@ function App() {
                 status={status}
                 loading={loading}
               />
+            ))}
+          </div>
+        </section>
+
+        <section className="panel amazonPanel">
+          <div className="panelHeader">
+            <div>
+              <p className="eyebrow">Amazon UK</p>
+              <h2>New product links</h2>
+            </div>
+            <span className="shopStatus error">Links only</span>
+          </div>
+
+          <div className="quickLinks">
+            {AMAZON_NEW_LINKS.map((item) => (
+              <a
+                key={item.name}
+                href={item.link}
+                target="_blank"
+                rel="noreferrer"
+                className="viewButton"
+              >
+                {item.name}
+              </a>
             ))}
           </div>
         </section>

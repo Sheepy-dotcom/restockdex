@@ -448,6 +448,10 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.amazonPanel {
+  border-color: rgba(255, 213, 36, 0.28);
+}
+
 .badges {
   display: flex;
   flex-wrap: wrap;
