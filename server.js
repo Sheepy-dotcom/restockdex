@@ -124,11 +124,20 @@ async function getCardVaultProducts() {
   const $ = cheerio.load(html);
   const products = [];
 
-  $("a").each((_, el) => {
-    const text = $(el).text().replace(/\s+/g, " ").trim();
-    const href = $(el).attr("href");
+  $("li.product-card").each((_, el) => {
+    const card = $(el);
+    const linkEl = card.find('a[href*="/products/"]').first();
+    const text = cleanProductName(linkEl.text());
+    const href = linkEl.attr("href");
+    const stockText = cleanProductName(card.find(".stock").text()).toLowerCase();
+    const isUnavailable =
+      card.hasClass("unavailable") ||
+      stockText.includes("out of stock") ||
+      stockText.includes("sold out");
+    const isInStock = /\d+\s+in stock|in stock/.test(stockText);
 
     if (!text || !href) return;
+    if (isUnavailable || !isInStock) return;
 
     if (
       href.includes("/products/") &&
@@ -143,6 +152,7 @@ async function getCardVaultProducts() {
         products.push({
           product: text,
           store: "The Card Vault",
+          availability: stockText,
           link,
         });
       }
@@ -154,33 +164,33 @@ async function getCardVaultProducts() {
 
 async function getMagicMadhouseProducts() {
   const { html } = await fetchWithTimeout(MAGIC_MADHOUSE_URL);
-  const $ = cheerio.load(html);
   const products = [];
+  const productObjects =
+    html.match(/\{\\"id\\":\d+,[\s\S]*?\\"category\\":\[[\s\S]*?\]\}/g) ||
+    [];
 
-  $("a").each((_, el) => {
-    const text = $(el).text().replace(/\s+/g, " ").trim();
-    const href = $(el).attr("href");
+  productObjects.forEach((productObject) => {
+    const productName = cleanProductName(
+      productObject.match(/\\"name\\":\\"([^\\"]+)/)?.[1] || ""
+    );
+    const link = (
+      productObject.match(/\\"url\\":\\"([^\\"]+)/)?.[1] || ""
+    ).replaceAll("\\/", "/");
+    const stockLevel = Number(
+      productObject.match(/\\"stock_level\\":(\d+)/)?.[1] || 0
+    );
 
-    if (!href) return;
-
-    const link = href.startsWith("http")
-      ? href
-      : `https://magicmadhouse.co.uk${href}`;
-
+    if (!productName || !link) return;
     if (!link.includes("magicmadhouse.co.uk/pokemon-me-")) return;
-
-    const productName =
-      text || link.split("/").pop().replaceAll("-", " ");
-
+    if (stockLevel <= 0) return;
     if (!matchesKeyword(`${productName} ${link}`)) return;
 
-    if (!products.some((p) => p.link === link)) {
-      products.push({
-        product: productName,
-        store: "Magic Madhouse",
-        link,
-      });
-    }
+    addUniqueProduct(products, {
+      product: productName,
+      store: "Magic Madhouse",
+      availability: `${stockLevel} in stock`,
+      link,
+    });
   });
 
   return products.slice(0, 15);
@@ -220,20 +230,40 @@ async function getArgosProducts() {
 
   const $ = cheerio.load(html);
   const products = [];
+  const availabilityById = new Map();
+  const productPattern =
+    /\\"productId\\":\\"(\d+)\\"[\s\S]*?\\"deliverable\\":(true|false)[\s\S]*?\\"reservable\\":(true|false)[\s\S]*?\\"buyable\\":(true|false)/g;
+
+  for (const match of html.matchAll(productPattern)) {
+    availabilityById.set(match[1], {
+      deliverable: match[2] === "true",
+      reservable: match[3] === "true",
+      buyable: match[4] === "true",
+    });
+  }
 
   $("a").each((_, el) => {
     const productName = cleanProductName($(el).text());
     const href = $(el).attr("href");
     const link = href ? absoluteUrl(href, ARGOS_URL) : null;
+    const productId = link?.match(/\/product\/(\d+)/)?.[1];
+    const availability = productId ? availabilityById.get(productId) : null;
+    const canBuy =
+      availability?.buyable &&
+      (availability.deliverable || availability.reservable);
 
     if (!productName || !link) return;
     if (!link.includes("argos.co.uk/product/")) return;
+    if (!canBuy) return;
     if (!productName.toLowerCase().includes("pok")) return;
     if (!matchesKeyword(`${productName} ${link}`)) return;
 
     addUniqueProduct(products, {
       product: productName,
       store: "Argos",
+      availability: availability.deliverable
+        ? "Available for delivery"
+        : "Available to reserve",
       link,
     });
   });
@@ -330,9 +360,9 @@ async function refreshProducts() {
 
       seenLinks.add(product.link);
 
-      return {
+    return {
         ...product,
-        stock: isNew ? "NEW DROP 🚨" : "Already seen",
+        stock: isNew ? "NEW IN STOCK 🚨" : product.availability || "In stock",
         alert:
           isNew && keywordMatch
             ? "KEYWORD ALERT 🔥"
