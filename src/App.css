@@ -417,4 +417,6 @@ h3 {
 .pill.gold {
   background: gold;
   color: black;
+}.panel h2 {
+  margin-bottom: 10px;
 }
