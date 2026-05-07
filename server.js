@@ -14,7 +14,7 @@ const MAGIC_MADHOUSE_URL =
   "https://magicmadhouse.co.uk/pokemon/pokemon-sets/phantasmal-flames";
 
 const CHAOS_CARDS_URL =
-  "https://www.chaoscards.co.uk/shop/card-games/pokemon";
+  "https://www.chaoscards.co.uk/brand/pokemon/sort/release-date-newest-first/cat/booster-boxes-pokemon,booster-packs-pokemon,gift-tins-pokemon,other-pokemon";
 
 const ARGOS_URL =
   "https://www.argos.co.uk/search/pokemon-cards/";

@@ -176,8 +176,8 @@ const SHOP_LINK_GROUPS = [
     note: "Pokemon searches for sealed products and collection boxes.",
     links: [
       {
-        name: "Pokemon",
-        link: "https://www.chaoscards.co.uk/search?type=product&q=pokemon",
+        name: "Newest Pokemon",
+        link: "https://www.chaoscards.co.uk/brand/pokemon/sort/release-date-newest-first/cat/booster-boxes-pokemon,booster-packs-pokemon,gift-tins-pokemon,other-pokemon",
       },
       {
         name: "Booster boxes",
@@ -380,8 +380,8 @@ function DropsPage({
       <section className="feedPanel">
         <div className="feedHeader">
           <div>
-            <p className="eyebrow">Live feed</p>
-            <h2>New product drops by shop</h2>
+            <p className="eyebrow">Stock tracker</p>
+            <h2>New Pokemon card stock by shop</h2>
           </div>
           <span className="countBadge">
             {lastUpdated
@@ -401,6 +401,7 @@ function DropsPage({
               items={items}
               status={status}
               loading={loading}
+              mode="drops"
             />
           ))}
         </div>
@@ -615,23 +616,28 @@ function MonitorCard({ store, status }) {
   );
 }
 
-function StoreSection({ store, items, status, loading }) {
+function StoreSection({ store, items, status, loading, mode = "drops" }) {
   const hasItems = items.length > 0;
   const hasError = status?.status === "error";
   const needsSetup = status?.status === "setup_needed";
+  const isDropsMode = mode === "drops";
   const statusLabel = loading
     ? "Checking"
     : needsSetup
     ? "Links only"
     : hasError
-    ? "Manual check"
+    ? isDropsMode
+      ? "Manual stock check"
+      : "Manual check"
+    : isDropsMode
+    ? "Tracking stock"
     : "Checking queues";
   const emptyMessage = loading
     ? "Checking stock..."
     : needsSetup
     ? "Use the Links page for quick product searches."
     : hasError
-    ? "The automatic checker could not read this shop. Use the Links page."
+    ? "The stock checker could not read this shop. Use the Links page for a manual stock check."
     : "No new drops captured in the last 48 hours.";
 
   return (
@@ -654,7 +660,7 @@ function StoreSection({ store, items, status, loading }) {
           {statusLabel}
         </span>
         <span className={hasItems ? "shopCount active" : "shopCount"}>
-          {items.length} found
+          {items.length} recent
         </span>
       </summary>
 
