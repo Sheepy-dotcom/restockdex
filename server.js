@@ -34,8 +34,20 @@ const NEWS_FEEDS = [
     url: "https://pokemondb.net/news/feed",
   },
   {
-    source: "PokeBeach",
-    url: "https://www.pokebeach.com/forums/forum/front-page-news.18/index.rss",
+    source: "Game Rant",
+    url: "https://gamerant.com/feed/",
+    filterKeywords: ["pokemon", "pokémon"],
+    headers: {
+      "User-Agent": "curl/8.7.1",
+      Accept: "*/*",
+      Connection: "close",
+    },
+  },
+  {
+    source: "PokeGuardian",
+    url: "https://www.pokeguardian.com/sitemap.xml",
+    type: "sitemap",
+    limit: 8,
   },
 ];
 
@@ -103,7 +115,7 @@ function matchesKeyword(text) {
   return KEYWORDS.some((keyword) => lower.includes(keyword));
 }
 
-async function fetchWithTimeout(url, timeout = 8000) {
+async function fetchWithTimeout(url, timeout = 8000, headers = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
 
@@ -113,6 +125,7 @@ async function fetchWithTimeout(url, timeout = 8000) {
       headers: {
         "User-Agent": "Mozilla/5.0",
         Accept: "text/html",
+        ...headers,
       },
     });
 
@@ -148,6 +161,16 @@ function cleanNewsText(text) {
       .replace(/&apos;/g, "'")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
+  );
+}
+
+function titleFromUrl(url) {
+  const slug = url.split("/").pop() || "";
+  return cleanNewsText(
+    slug
+      .replace(/^\d+_/, "")
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase())
   );
 }
 
@@ -515,11 +538,29 @@ async function refreshPokemonCenterTraffic() {
 }
 
 async function getNewsFeedItems(feed) {
-  const { status, html } = await fetchWithTimeout(feed.url, 8000);
+  const { status, html } = await fetchWithTimeout(feed.url, 8000, feed.headers);
   if (status !== 200) throw new Error(`${feed.source} returned ${status}`);
 
   const $ = cheerio.load(html, { xmlMode: true });
   const items = [];
+
+  if (feed.type === "sitemap") {
+    $("url loc").each((_, el) => {
+      const link = cleanNewsText($(el).text());
+
+      if (!/^https:\/\/www\.pokeguardian\.com\/\d+_/.test(link)) return;
+
+      items.push({
+        title: titleFromUrl(link),
+        link,
+        source: feed.source,
+        publishedAt: "",
+        description: "Pokemon TCG news from PokeGuardian.",
+      });
+    });
+
+    return items.slice(0, feed.limit || 8);
+  }
 
   $("item").each((_, el) => {
     const item = $(el);
@@ -531,6 +572,14 @@ async function getNewsFeedItems(feed) {
       .slice(0, 180);
 
     if (!title || !link) return;
+    if (
+      feed.filterKeywords &&
+      !feed.filterKeywords.some((keyword) =>
+        `${title} ${description} ${link}`.toLowerCase().includes(keyword)
+      )
+    ) {
+      return;
+    }
 
     items.push({
       title,
@@ -561,16 +610,24 @@ async function refreshNews() {
       result.status === "fulfilled" ? result.value : []
     );
 
-    cachedNews = newsItems
-      .filter((item, index, allItems) =>
+    const uniqueNewsItems = newsItems.filter((item, index, allItems) =>
         allItems.findIndex((existing) => existing.link === item.link) === index
-      )
+      );
+    const sourceCounts = new Map();
+
+    cachedNews = uniqueNewsItems
+      .filter((item) => {
+        const count = sourceCounts.get(item.source) || 0;
+        if (count >= 6) return false;
+        sourceCounts.set(item.source, count + 1);
+        return true;
+      })
       .sort(
         (a, b) =>
           new Date(b.publishedAt || 0).getTime() -
           new Date(a.publishedAt || 0).getTime()
       )
-      .slice(0, 12);
+      .slice(0, 18);
     newsLastUpdated = new Date().toISOString();
   } catch (error) {
     console.error("News refresh failed:", error.message);

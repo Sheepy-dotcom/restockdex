@@ -68,8 +68,12 @@ const NEWS_LINKS = [
     link: "https://www.pokemon.com/us/pokemon-news",
   },
   {
-    name: "PokeBeach",
-    link: "https://www.pokebeach.com/",
+    name: "Game Rant Pokemon",
+    link: "https://gamerant.com/pokemon/",
+  },
+  {
+    name: "PokeGuardian",
+    link: "https://www.pokeguardian.com/",
   },
   {
     name: "Pokemon Database news",
