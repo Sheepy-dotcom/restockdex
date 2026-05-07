@@ -10,9 +10,9 @@ const POKEMON_CENTER_NEW_RELEASES =
   "https://www.pokemoncenter.com/en-gb/category/new-releases";
 
 const NAV_ITEMS = [
+  { id: "monitors", label: "Monitors" },
   { id: "drops", label: "Drops" },
   { id: "links", label: "Links" },
-  { id: "monitors", label: "Monitors" },
   { id: "news", label: "News" },
 ];
 
@@ -91,7 +91,7 @@ const STORE_ORDER = [
 ];
 
 function App() {
-  const [activePage, setActivePage] = useState("drops");
+  const [activePage, setActivePage] = useState("monitors");
   const [liveData, setLiveData] = useState([]);
   const [trafficData, setTrafficData] = useState(null);
   const [shopStatus, setShopStatus] = useState([]);
@@ -165,8 +165,8 @@ function App() {
 
           <div className="heroText">
             <p>
-              Pokemon drop tracking, quick links, access monitors, and news in
-              one tidy dashboard.
+              Pokemon Center access checks, shop monitors, product drops, and
+              news in one tidy dashboard.
             </p>
           </div>
 
