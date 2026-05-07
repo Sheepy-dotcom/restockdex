@@ -128,6 +128,28 @@ const SHOP_LINK_GROUPS = [
     ],
   },
   {
+    shop: "Very",
+    note: "Very searches for popular Pokemon card products.",
+    links: [
+      {
+        name: "Pokemon cards",
+        link: "https://www.very.co.uk/search/pokemon%20cards",
+      },
+      {
+        name: "Elite trainer boxes",
+        link: "https://www.very.co.uk/search/pokemon%20elite%20trainer%20box",
+      },
+      {
+        name: "Booster bundles",
+        link: "https://www.very.co.uk/search/pokemon%20booster%20bundle",
+      },
+      {
+        name: "Tins",
+        link: "https://www.very.co.uk/search/pokemon%20tin",
+      },
+    ],
+  },
+  {
     shop: "Smyths Toys",
     note: "Pokemon TCG searches and Smyths product pages.",
     links: [
@@ -196,6 +218,7 @@ const STORE_ORDER = [
   "The Card Vault",
   "Magic Madhouse",
   "Argos",
+  "Very",
   "Amazon UK",
   "Chaos Cards",
   "Smyths Toys",

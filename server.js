@@ -19,6 +19,9 @@ const CHAOS_CARDS_URL =
 const ARGOS_URL =
   "https://www.argos.co.uk/search/pokemon-cards/";
 
+const VERY_URL =
+  "https://www.very.co.uk/search/pokemon%20cards";
+
 const AMAZON_URL =
   "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys";
 
@@ -348,6 +351,36 @@ async function getArgosProducts() {
   return products.slice(0, 25);
 }
 
+async function getVeryProducts() {
+  const { status, html } = await fetchWithTimeout(VERY_URL);
+  if (status !== 200) throw new Error(`Very returned ${status}`);
+  if (isChallengePage(html)) {
+    throw new Error("Very access check blocked");
+  }
+
+  const $ = cheerio.load(html);
+  const products = [];
+
+  $("a").each((_, el) => {
+    const productName = cleanProductName($(el).text());
+    const href = $(el).attr("href");
+    const link = href ? absoluteUrl(href, VERY_URL) : null;
+
+    if (!productName || !link) return;
+    if (!link.includes("very.co.uk")) return;
+    if (!productName.toLowerCase().includes("pok")) return;
+    if (!matchesKeyword(`${productName} ${link}`)) return;
+
+    addUniqueProduct(products, {
+      product: productName,
+      store: "Very",
+      link,
+    });
+  });
+
+  return products.slice(0, 20);
+}
+
 async function getSmythsProducts() {
   const { status, html } = await fetchWithTimeout(SMYTHS_URL);
   if (status !== 200) throw new Error(`Smyths Toys returned ${status}`);
@@ -394,6 +427,7 @@ async function refreshProducts() {
       ["Magic Madhouse", getMagicMadhouseProducts],
       ["Chaos Cards", getChaosCardsProducts],
       ["Argos", getArgosProducts],
+      ["Very", getVeryProducts],
       ["Amazon UK", getAmazonProducts],
       ["Smyths Toys", getSmythsProducts],
     ];
