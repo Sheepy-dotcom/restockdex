@@ -99,10 +99,12 @@ let cachedTraffic = [
 
 let cachedShopStatus = [];
 let cachedNews = [];
+let cachedDrops = [];
 let seenLinks = new Set();
 let seenLinksPrimed = false;
 let lastUpdated = null;
 let newsLastUpdated = null;
+const DROP_HISTORY_MS = 48 * 60 * 60 * 1000;
 
 function setupNeeded(message) {
   const error = new Error(message);
@@ -187,6 +189,11 @@ function isChallengePage(html) {
 function addUniqueProduct(products, product) {
   if (!product.link || products.some((p) => p.link === product.link)) return;
   products.push(product);
+}
+
+function pruneRecentDrops(drops) {
+  const cutoff = Date.now() - DROP_HISTORY_MS;
+  return drops.filter((drop) => new Date(drop.droppedAt).getTime() >= cutoff);
 }
 
 async function getCardVaultProducts() {
@@ -440,13 +447,16 @@ async function refreshProducts() {
       seenLinksPrimed = true;
     }
 
+    const checkedAt = new Date().toISOString();
+    const freshDrops = [];
+
     cachedProducts = products.map((product) => {
       const isNew = !seenLinks.has(product.link);
       const keywordMatch = matchesKeyword(product.product);
 
       seenLinks.add(product.link);
 
-      return {
+      const productWithStatus = {
         ...product,
         stock: isNew ? "NEW PRODUCT DROP 🚨" : product.availability || "In stock",
         alert:
@@ -456,7 +466,23 @@ async function refreshProducts() {
             ? "Keyword match"
             : false,
       };
+
+      if (isNew) {
+        freshDrops.push({
+          ...productWithStatus,
+          droppedAt: checkedAt,
+        });
+      }
+
+      return productWithStatus;
     });
+
+    cachedDrops = pruneRecentDrops([
+      ...freshDrops,
+      ...cachedDrops.filter(
+        (drop) => !freshDrops.some((freshDrop) => freshDrop.link === drop.link)
+      ),
+    ]);
 
     lastUpdated = new Date().toISOString();
 
@@ -673,6 +699,13 @@ app.get("/status", (req, res) => {
 
 app.get("/stock", (req, res) => {
   res.json(cachedProducts);
+});
+
+app.get("/drops", (req, res) => {
+  res.json({
+    lastUpdated,
+    items: cachedDrops,
+  });
 });
 
 app.get("/pokemon-center-traffic", (req, res) => {

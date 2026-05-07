@@ -16,49 +16,160 @@ const NAV_ITEMS = [
   { id: "news", label: "News" },
 ];
 
-const SHOP_LINKS = [
+const SHOP_LINK_GROUPS = [
   {
-    name: "Pokemon Center",
-    link: POKEMON_CENTER_NEW_RELEASES,
+    shop: "Pokemon Center",
+    note: "Official new releases and product searches.",
+    links: [
+      {
+        name: "New releases",
+        link: POKEMON_CENTER_NEW_RELEASES,
+      },
+      {
+        name: "Trading Card Game",
+        link: "https://www.pokemoncenter.com/en-gb/search/trading%20card%20game",
+      },
+      {
+        name: "Elite trainer boxes",
+        link: "https://www.pokemoncenter.com/en-gb/search/elite%20trainer%20box",
+      },
+      {
+        name: "Booster bundles",
+        link: "https://www.pokemoncenter.com/en-gb/search/booster%20bundle",
+      },
+    ],
   },
   {
-    name: "The Card Vault",
-    link: "https://thecardvault.co.uk/collections/pokemon-new-releases",
+    shop: "Amazon UK",
+    note: "Popular Pokemon TCG searches on Amazon UK.",
+    links: [
+      {
+        name: "Newest Pokemon TCG",
+        link: "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys&s=date-desc-rank",
+      },
+      {
+        name: "Booster bundles",
+        link: "https://www.amazon.co.uk/s?k=pokemon+booster+bundle&i=toys&s=date-desc-rank",
+      },
+      {
+        name: "Elite trainer boxes",
+        link: "https://www.amazon.co.uk/s?k=pokemon+elite+trainer+box&i=toys&s=date-desc-rank",
+      },
+      {
+        name: "Tins",
+        link: "https://www.amazon.co.uk/s?k=pokemon+tcg+tin&i=toys&s=date-desc-rank",
+      },
+    ],
   },
   {
-    name: "Magic Madhouse",
-    link: "https://magicmadhouse.co.uk/pokemon",
+    shop: "The Card Vault",
+    note: "Pokemon new releases and major TCG product searches.",
+    links: [
+      {
+        name: "New releases",
+        link: "https://thecardvault.co.uk/collections/pokemon-new-releases",
+      },
+      {
+        name: "Booster boxes",
+        link: "https://thecardvault.co.uk/search?q=pokemon+booster+box",
+      },
+      {
+        name: "Elite trainer boxes",
+        link: "https://thecardvault.co.uk/search?q=pokemon+elite+trainer+box",
+      },
+      {
+        name: "Tins & collections",
+        link: "https://thecardvault.co.uk/search?q=pokemon+tin+collection",
+      },
+    ],
   },
   {
-    name: "Argos",
-    link: "https://www.argos.co.uk/search/pokemon-cards/",
+    shop: "Magic Madhouse",
+    note: "Pokemon product searches across the Magic Madhouse catalogue.",
+    links: [
+      {
+        name: "Pokemon",
+        link: "https://magicmadhouse.co.uk/pokemon",
+      },
+      {
+        name: "Booster boxes",
+        link: "https://magicmadhouse.co.uk/search.php?search_query=pokemon%20booster%20box",
+      },
+      {
+        name: "Elite trainer boxes",
+        link: "https://magicmadhouse.co.uk/search.php?search_query=pokemon%20elite%20trainer%20box",
+      },
+      {
+        name: "Booster bundles",
+        link: "https://magicmadhouse.co.uk/search.php?search_query=pokemon%20booster%20bundle",
+      },
+    ],
   },
   {
-    name: "Amazon UK",
-    link: "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys",
+    shop: "Argos",
+    note: "High-street stock searches for popular Pokemon card products.",
+    links: [
+      {
+        name: "Pokemon cards",
+        link: "https://www.argos.co.uk/search/pokemon-cards/",
+      },
+      {
+        name: "Elite trainer boxes",
+        link: "https://www.argos.co.uk/search/pokemon-elite-trainer-box/",
+      },
+      {
+        name: "Booster bundles",
+        link: "https://www.argos.co.uk/search/pokemon-booster-bundle/",
+      },
+      {
+        name: "Tins",
+        link: "https://www.argos.co.uk/search/pokemon-tin/",
+      },
+    ],
   },
   {
-    name: "Smyths Toys",
-    link: "https://www.smythstoys.com/uk/en-gb/brand/pokemon/pokemon-trading-card-game/c/SM0601011202",
+    shop: "Smyths Toys",
+    note: "Pokemon TCG searches and Smyths product pages.",
+    links: [
+      {
+        name: "Pokemon TCG",
+        link: "https://www.smythstoys.com/uk/en-gb/brand/pokemon/pokemon-trading-card-game/c/SM0601011202",
+      },
+      {
+        name: "Pokemon cards",
+        link: "https://www.smythstoys.com/uk/en-gb/search/?text=pokemon%20cards",
+      },
+      {
+        name: "Elite trainer boxes",
+        link: "https://www.smythstoys.com/uk/en-gb/search/?text=pokemon%20elite%20trainer%20box",
+      },
+      {
+        name: "Booster bundles",
+        link: "https://www.smythstoys.com/uk/en-gb/search/?text=pokemon%20booster%20bundle",
+      },
+    ],
   },
   {
-    name: "Chaos Cards",
-    link: "https://www.chaoscards.co.uk/search?type=product&q=pokemon",
-  },
-];
-
-const AMAZON_NEW_LINKS = [
-  {
-    name: "Newest Pokemon TCG",
-    link: "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys&s=date-desc-rank",
-  },
-  {
-    name: "Booster bundles",
-    link: "https://www.amazon.co.uk/s?k=pokemon+booster+bundle&i=toys&s=date-desc-rank",
-  },
-  {
-    name: "Elite trainer boxes",
-    link: "https://www.amazon.co.uk/s?k=pokemon+elite+trainer+box&i=toys&s=date-desc-rank",
+    shop: "Chaos Cards",
+    note: "Pokemon searches for sealed products and collection boxes.",
+    links: [
+      {
+        name: "Pokemon",
+        link: "https://www.chaoscards.co.uk/search?type=product&q=pokemon",
+      },
+      {
+        name: "Booster boxes",
+        link: "https://www.chaoscards.co.uk/search?type=product&q=pokemon%20booster%20box",
+      },
+      {
+        name: "Elite trainer boxes",
+        link: "https://www.chaoscards.co.uk/search?type=product&q=pokemon%20elite%20trainer%20box",
+      },
+      {
+        name: "Collection boxes",
+        link: "https://www.chaoscards.co.uk/search?type=product&q=pokemon%20collection%20box",
+      },
+    ],
   },
 ];
 
@@ -93,6 +204,7 @@ const STORE_ORDER = [
 function App() {
   const [activePage, setActivePage] = useState("monitors");
   const [liveData, setLiveData] = useState([]);
+  const [dropData, setDropData] = useState([]);
   const [trafficData, setTrafficData] = useState(null);
   const [shopStatus, setShopStatus] = useState([]);
   const [newsItems, setNewsItems] = useState([]);
@@ -111,19 +223,22 @@ function App() {
     try {
       setError("");
 
-      const [stockRes, trafficRes, statusRes, newsRes] = await Promise.all([
+      const [stockRes, dropsRes, trafficRes, statusRes, newsRes] = await Promise.all([
         fetch(`${API_URL}/stock`),
+        fetch(`${API_URL}/drops`),
         fetch(`${API_URL}/pokemon-center-traffic`),
         fetch(`${API_URL}/status`),
         fetch(`${API_URL}/news`),
       ]);
 
       const stock = await stockRes.json();
+      const drops = await dropsRes.json();
       const traffic = await trafficRes.json();
       const status = await statusRes.json();
       const news = await newsRes.json();
 
       setLiveData(Array.isArray(stock) ? stock : []);
+      setDropData(Array.isArray(drops?.items) ? drops.items : []);
       setTrafficData(Array.isArray(traffic) ? traffic[0] : null);
       setShopStatus(Array.isArray(status?.shops) ? status.shops : []);
       setNewsItems(Array.isArray(news?.items) ? news.items : []);
@@ -140,13 +255,12 @@ function App() {
   const groupedStores = useMemo(() => {
     return STORE_ORDER.map((store) => ({
       store,
-      items: liveData.filter((item) => item.store?.includes(store)),
+      items: dropData.filter((item) => item.store?.includes(store)),
       status: shopStatus.find((shop) => shop.store === store),
     }));
-  }, [liveData, shopStatus]);
+  }, [dropData, shopStatus]);
 
-  const newDrops = liveData.filter((item) => item.stock?.includes("NEW"));
-  const hotDrops = liveData.filter((item) => item.alert?.includes("KEYWORD"));
+  const hotDrops = dropData.filter((item) => item.alert?.includes("KEYWORD"));
   const pokemonCenterStatus = trafficData?.accessStatus || "checking";
   const trafficBadgeLabel =
     pokemonCenterStatus === "busy"
@@ -199,9 +313,9 @@ function App() {
             groupedStores={groupedStores}
             hotDrops={hotDrops}
             lastUpdated={lastUpdated}
+            dropData={dropData}
             liveData={liveData}
             loading={loading}
-            newDrops={newDrops}
           />
         )}
 
@@ -228,15 +342,15 @@ function DropsPage({
   groupedStores,
   hotDrops,
   lastUpdated,
+  dropData,
   liveData,
   loading,
-  newDrops,
 }) {
   return (
     <>
       <section className="statsGrid">
         <StatCard label="Products tracked" value={liveData.length} />
-        <StatCard label="New drops" value={newDrops.length} />
+        <StatCard label="Recent drops" value={dropData.length} />
         <StatCard label="Hot matches" value={hotDrops.length} />
       </section>
 
@@ -244,7 +358,7 @@ function DropsPage({
         <div className="feedHeader">
           <div>
             <p className="eyebrow">Live feed</p>
-            <h2>New product drops</h2>
+            <h2>New product drops by shop</h2>
           </div>
           <span className="countBadge">
             {lastUpdated
@@ -274,54 +388,40 @@ function DropsPage({
 
 function LinksPage() {
   return (
-    <>
-      <section className="panel amazonPanel">
-        <div className="panelHeader">
-          <div>
-            <p className="eyebrow">Amazon UK</p>
-            <h2>New product links</h2>
-          </div>
-          <span className="shopStatus error">Links only</span>
+    <section className="panel">
+      <div className="panelHeader">
+        <div>
+          <p className="eyebrow">Manual checks</p>
+          <h2>Shop product links</h2>
         </div>
+        <span className="shopStatus error">Links only</span>
+      </div>
 
-        <div className="quickLinks">
-          {AMAZON_NEW_LINKS.map((item) => (
-            <a
-              key={item.name}
-              href={item.link}
-              target="_blank"
-              rel="noreferrer"
-              className="viewButton"
-            >
-              {item.name}
-            </a>
-          ))}
-        </div>
-      </section>
+      <div className="shopLinkGroups">
+        {SHOP_LINK_GROUPS.map((group) => (
+          <article className="linkGroup" key={group.shop}>
+            <div>
+              <p className="storeKicker">{group.note}</p>
+              <h3>{group.shop}</h3>
+            </div>
 
-      <section className="panel">
-        <div className="panelHeader">
-          <div>
-            <p className="eyebrow">Manual checks</p>
-            <h2>Quick shop links</h2>
-          </div>
-        </div>
-
-        <div className="quickLinks">
-          {SHOP_LINKS.map((shop) => (
-            <a
-              key={shop.name}
-              href={shop.link}
-              target="_blank"
-              rel="noreferrer"
-              className="viewButton"
-            >
-              {shop.name}
-            </a>
-          ))}
-        </div>
-      </section>
-    </>
+            <div className="quickLinks">
+              {group.links.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="viewButton"
+                >
+                  {item.name}
+                </a>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -495,7 +595,7 @@ function StoreSection({ store, items, status, loading }) {
     ? "Automatic alerts need official API credentials."
     : hasError
     ? "This shop blocked the automatic check. Use the links page."
-    : "No confirmed in-stock drops right now.";
+    : "No new drops captured in the last 48 hours.";
 
   return (
     <details
