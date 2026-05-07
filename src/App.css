@@ -135,41 +135,45 @@ a {
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
 }
 
-.pageTabs {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+.pageMenu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   position: sticky;
   top: 0;
   z-index: 10;
   margin: 14px 0 16px;
-  padding: 8px;
+  padding: 10px;
   border: 1px solid rgba(79, 163, 255, 0.18);
   border-radius: 8px;
   background: rgba(4, 10, 23, 0.92);
   backdrop-filter: blur(14px);
 }
 
-.tabButton {
+.pageMenu label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.pageMenu select {
+  flex: 1;
   min-height: 40px;
-  border: 1px solid transparent;
+  border: 1px solid rgba(79, 163, 255, 0.34);
   border-radius: 8px;
   color: #cfe8ff;
-  background: transparent;
+  background: rgba(8, 26, 52, 0.86);
   font: inherit;
   font-weight: 900;
   cursor: pointer;
+  outline: none;
+  padding: 0 12px;
 }
 
-.tabButton.active {
-  color: #101827;
-  background: var(--yellow);
+.pageMenu select:focus {
   border-color: var(--yellow);
-}
-
-.tabButton:not(.active):hover {
-  border-color: rgba(79, 163, 255, 0.28);
-  background: rgba(8, 26, 52, 0.7);
+  box-shadow: 0 0 0 3px rgba(255, 213, 36, 0.12);
 }
 
 .statsGrid {
@@ -640,7 +644,6 @@ h3 {
 
   .statsGrid,
   .quickLinks,
-  .pageTabs,
   .monitorGrid,
   .newsGrid {
     grid-template-columns: 1fr;

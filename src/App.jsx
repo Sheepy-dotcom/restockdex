@@ -177,17 +177,19 @@ function App() {
           </div>
         </header>
 
-        <nav className="pageTabs" aria-label="RestockDex pages">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              className={activePage === item.id ? "tabButton active" : "tabButton"}
-              onClick={() => setActivePage(item.id)}
-              type="button"
-            >
-              {item.label}
-            </button>
-          ))}
+        <nav className="pageMenu" aria-label="RestockDex pages">
+          <label htmlFor="page-select">Menu</label>
+          <select
+            id="page-select"
+            value={activePage}
+            onChange={(event) => setActivePage(event.target.value)}
+          >
+            {NAV_ITEMS.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
         </nav>
 
         {error && <div className="errorBox">{error}</div>}
