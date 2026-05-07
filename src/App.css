@@ -35,7 +35,10 @@ a {
 .heroPanel,
 .panel,
 .statCard,
-.dropCard {
+.dropCard,
+.feedPanel,
+.monitorCard,
+.newsCard {
   border: 1px solid rgba(79, 163, 255, 0.24);
   border-radius: 8px;
   background: rgba(5, 14, 30, 0.82);
@@ -79,6 +82,11 @@ a {
   line-height: 1.6;
 }
 
+.heroActions {
+  display: flex;
+  justify-content: center;
+}
+
 .refreshButton,
 .viewButton {
   min-height: 44px;
@@ -114,6 +122,30 @@ a {
 .viewButton:hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+}
+
+.pageTabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.tabButton {
+  min-height: 44px;
+  border: 1px solid rgba(79, 163, 255, 0.3);
+  border-radius: 8px;
+  color: #cfe8ff;
+  background: rgba(8, 26, 52, 0.78);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tabButton.active {
+  color: #101827;
+  background: #ffd524;
+  border-color: #ffd524;
 }
 
 .statsGrid {
@@ -222,7 +254,13 @@ h3 {
   font-size: 12px;
 }
 
-.statusBadge.danger {
+.statusBadge.blocked {
+  color: #fff4b8;
+  background: rgba(255, 213, 36, 0.12);
+  border-color: rgba(255, 213, 36, 0.42);
+}
+
+.statusBadge.busy {
   color: #fecaca;
   background: rgba(229, 42, 42, 0.16);
   border-color: rgba(252, 165, 165, 0.5);
@@ -250,7 +288,15 @@ h3 {
   background-size: auto, 28px 28px;
 }
 
-.trafficCard.high {
+.trafficCard.blocked {
+  border-color: rgba(255, 213, 36, 0.46);
+  background:
+    linear-gradient(135deg, rgba(94, 69, 0, 0.38), rgba(5, 14, 30, 0.76)),
+    linear-gradient(90deg, rgba(255, 213, 36, 0.08) 1px, transparent 1px);
+  background-size: auto, 28px 28px;
+}
+
+.trafficCard.busy {
   border-color: rgba(252, 165, 165, 0.58);
   background:
     linear-gradient(135deg, rgba(127, 29, 29, 0.52), rgba(5, 14, 30, 0.78)),
@@ -294,7 +340,46 @@ h3 {
 }
 
 .feedPanel {
+  padding: 20px;
   margin-bottom: 16px;
+}
+
+.monitorGrid,
+.newsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.monitorCard,
+.newsCard {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.monitorCard {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.monitorCard p,
+.newsCard p {
+  color: #9fb9d5;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.newsCard {
+  align-content: space-between;
+  min-height: 210px;
+}
+
+.newsFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .shopGrid {
@@ -530,7 +615,10 @@ h3 {
   }
 
   .statsGrid,
-  .quickLinks {
+  .quickLinks,
+  .pageTabs,
+  .monitorGrid,
+  .newsGrid {
     grid-template-columns: 1fr;
   }
 
@@ -548,8 +636,15 @@ h3 {
     width: fit-content;
   }
 
-  .dropCard {
+  .dropCard,
+  .monitorCard,
+  .newsFooter {
     grid-template-columns: 1fr;
+  }
+
+  .newsFooter {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .viewButton,

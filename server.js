@@ -28,6 +28,17 @@ const SMYTHS_URL =
 const POKEMON_CENTER_URL =
   "https://www.pokemoncenter.com/en-gb/category/new-releases";
 
+const NEWS_FEEDS = [
+  {
+    source: "Pokemon Database",
+    url: "https://pokemondb.net/news/feed",
+  },
+  {
+    source: "PokeBeach",
+    url: "https://www.pokebeach.com/forums/forum/front-page-news.18/index.rss",
+  },
+];
+
 const KEYWORDS = [
   "booster",
   "booster pack",
@@ -75,9 +86,11 @@ let cachedTraffic = [
 ];
 
 let cachedShopStatus = [];
+let cachedNews = [];
 let seenLinks = new Set();
 let seenLinksPrimed = false;
 let lastUpdated = null;
+let newsLastUpdated = null;
 
 function setupNeeded(message) {
   const error = new Error(message);
@@ -122,6 +135,20 @@ function absoluteUrl(href, baseUrl) {
 
 function cleanProductName(text) {
   return text.replace(/\s+/g, " ").trim();
+}
+
+function cleanNewsText(text) {
+  return cleanProductName(
+    text
+      .replace(/<!\[CDATA\[/g, "")
+      .replace(/\]\]>/g, "")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&apos;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+  );
 }
 
 function isChallengePage(html) {
@@ -442,17 +469,25 @@ async function refreshPokemonCenterTraffic() {
     const hasQueueSignal = detectedSignals.some((signal) =>
       ["queue", "waiting room", "high traffic"].includes(signal)
     );
-    const trafficHigh =
+    const isBusy =
       [429, 503].includes(status) ||
       responseTime > 10000 ||
       hasQueueSignal ||
       detectedSignals.length >= 3;
+    const isBlocked = status === 403;
+    const accessStatus = isBusy ? "busy" : isBlocked ? "blocked" : "normal";
+    const statusText = isBusy
+      ? "Potential queue / busy"
+      : isBlocked
+      ? "Manual check suggested"
+      : "Normal";
 
     cachedTraffic = [
       {
         product: "Pokémon Center Monitor",
         store: "Pokémon Center UK",
-        stock: trafficHigh ? "POSSIBLE DROP / HIGH TRAFFIC 🚨" : "Normal",
+        stock: statusText,
+        accessStatus,
         httpStatus: status,
         responseTime: `${responseTime}ms`,
         detectedSignals,
@@ -466,7 +501,8 @@ async function refreshPokemonCenterTraffic() {
       {
         product: "Pokémon Center Monitor",
         store: "Pokémon Center UK",
-        stock: "Possible blocking / timeout",
+        stock: "Manual check suggested",
+        accessStatus: "blocked",
         httpStatus: "Error",
         responseTime: "Timeout",
         detectedSignals: ["timeout or blocked"],
@@ -478,10 +514,74 @@ async function refreshPokemonCenterTraffic() {
   }
 }
 
+async function getNewsFeedItems(feed) {
+  const { status, html } = await fetchWithTimeout(feed.url, 8000);
+  if (status !== 200) throw new Error(`${feed.source} returned ${status}`);
+
+  const $ = cheerio.load(html, { xmlMode: true });
+  const items = [];
+
+  $("item").each((_, el) => {
+    const item = $(el);
+    const title = cleanNewsText(item.find("title").first().text());
+    const link = cleanNewsText(item.find("link").first().text());
+    const publishedAt = cleanNewsText(item.find("pubDate").first().text());
+    const description = cleanNewsText(item.find("description").first().text())
+      .replace(/<[^>]+>/g, "")
+      .slice(0, 180);
+
+    if (!title || !link) return;
+
+    items.push({
+      title,
+      link,
+      source: feed.source,
+      publishedAt,
+      description,
+    });
+  });
+
+  return items;
+}
+
+async function refreshNews() {
+  const fifteenMinutes = 15 * 60 * 1000;
+  if (
+    newsLastUpdated &&
+    Date.now() - new Date(newsLastUpdated).getTime() < fifteenMinutes
+  ) {
+    return;
+  }
+
+  try {
+    const results = await Promise.allSettled(
+      NEWS_FEEDS.map((feed) => getNewsFeedItems(feed))
+    );
+    const newsItems = results.flatMap((result) =>
+      result.status === "fulfilled" ? result.value : []
+    );
+
+    cachedNews = newsItems
+      .filter((item, index, allItems) =>
+        allItems.findIndex((existing) => existing.link === item.link) === index
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.publishedAt || 0).getTime() -
+          new Date(a.publishedAt || 0).getTime()
+      )
+      .slice(0, 12);
+    newsLastUpdated = new Date().toISOString();
+  } catch (error) {
+    console.error("News refresh failed:", error.message);
+  }
+}
+
 async function refreshAll() {
   await Promise.allSettled([
     refreshProducts(),
     refreshPokemonCenterTraffic(),
+    refreshNews(),
   ]);
 }
 
@@ -520,6 +620,13 @@ app.get("/stock", (req, res) => {
 
 app.get("/pokemon-center-traffic", (req, res) => {
   res.json(cachedTraffic);
+});
+
+app.get("/news", (req, res) => {
+  res.json({
+    lastUpdated: newsLastUpdated,
+    items: cachedNews,
+  });
 });
 
 app.listen(PORT, "0.0.0.0", () => {
