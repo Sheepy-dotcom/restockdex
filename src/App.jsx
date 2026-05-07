@@ -6,6 +6,9 @@ import pokemonCenterLogo from "./assets/pokemon-center-white.png";
 const API_URL =
   import.meta.env.VITE_API_URL || "https://restockdex-production.up.railway.app";
 
+const POKEMON_CENTER_NEW_RELEASES =
+  "https://www.pokemoncenter.com/en-gb/category/new-releases";
+
 const SHOP_LINKS = [
   {
     name: "Argos",
@@ -141,7 +144,19 @@ function App() {
               Status: {trafficData?.httpStatus || "Checking"} | Response:{" "}
               {trafficData?.responseTime || "Checking"}
             </p>
-            <span className="refreshNote">Refreshes automatically every 60 seconds</span>
+            <div className="trafficActions">
+              <span className="refreshNote">
+                Refreshes automatically every 60 seconds
+              </span>
+              <a
+                href={POKEMON_CENTER_NEW_RELEASES}
+                target="_blank"
+                rel="noreferrer"
+                className="viewButton"
+              >
+                Pokemon Center new releases
+              </a>
+            </div>
           </div>
         </section>
 

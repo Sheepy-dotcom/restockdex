@@ -439,10 +439,14 @@ async function refreshPokemonCenterTraffic() {
       lowerHtml.includes(signal)
     );
 
+    const hasQueueSignal = detectedSignals.some((signal) =>
+      ["queue", "waiting room", "high traffic"].includes(signal)
+    );
     const trafficHigh =
-      status !== 200 ||
-      responseTime > 6000 ||
-      detectedSignals.length >= 2;
+      [429, 503].includes(status) ||
+      responseTime > 10000 ||
+      hasQueueSignal ||
+      detectedSignals.length >= 3;
 
     cachedTraffic = [
       {
