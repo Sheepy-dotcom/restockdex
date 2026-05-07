@@ -393,12 +393,35 @@ h3 {
   align-items: start;
 }
 
+.monitorCard.changed {
+  border-color: rgba(255, 213, 36, 0.45);
+}
+
 .monitorCard p,
 .newsCard p,
 .linkGroup p {
   color: #9fb9d5;
   line-height: 1.5;
   margin-bottom: 0;
+}
+
+.accessChange {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0 0 8px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 213, 36, 0.38);
+  border-radius: 999px;
+  color: #fff4b8;
+  background: rgba(255, 213, 36, 0.12);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.accessChange.online {
+  color: #c8ff7a;
+  border-color: rgba(134, 239, 172, 0.42);
+  background: rgba(34, 197, 94, 0.12);
 }
 
 .linkGroup {

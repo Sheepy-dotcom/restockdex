@@ -103,6 +103,7 @@ let cachedTraffic = [
 let cachedShopStatus = [];
 let cachedNews = [];
 let cachedDrops = [];
+let previousShopStatus = new Map();
 let seenLinks = new Set();
 let seenLinksPrimed = false;
 let lastUpdated = null;
@@ -438,25 +439,37 @@ async function refreshProducts() {
 
     cachedShopStatus = results.map((result, index) => {
       const [store] = shopChecks[index];
+      const previousStatus = previousShopStatus.get(store);
+      const checkedAt = new Date().toISOString();
 
       if (result.status === "fulfilled") {
-        return {
+        const status = "online";
+        const shopStatus = {
           store,
-          status: "online",
+          status,
+          previousStatus,
+          accessChanged: Boolean(previousStatus && previousStatus !== status),
           count: result.value.length,
           error: null,
-          checkedAt: new Date().toISOString(),
+          checkedAt,
         };
+        previousShopStatus.set(store, status);
+        return shopStatus;
       }
 
-      return {
+      const status =
+        result.reason?.code === "SETUP_NEEDED" ? "setup_needed" : "error";
+      const shopStatus = {
         store,
-        status:
-          result.reason?.code === "SETUP_NEEDED" ? "setup_needed" : "error",
+        status,
+        previousStatus,
+        accessChanged: Boolean(previousStatus && previousStatus !== status),
         count: 0,
         error: result.reason?.message || "Shop check failed",
-        checkedAt: new Date().toISOString(),
+        checkedAt,
       };
+      previousShopStatus.set(store, status);
+      return shopStatus;
     });
 
     const products = results.flatMap((result) =>

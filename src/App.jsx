@@ -288,8 +288,8 @@ function App() {
   const trafficBadgeLabel =
     pokemonCenterStatus === "busy"
       ? "Potential queue"
-      : pokemonCenterStatus === "blocked"
-      ? "Check manually"
+    : pokemonCenterStatus === "blocked"
+      ? "Manual check"
       : pokemonCenterStatus === "normal"
       ? "Normal"
       : "Checking";
@@ -302,7 +302,7 @@ function App() {
 
           <div className="heroText">
             <p>
-              Pokemon Center access checks, shop monitors, product drops, and
+              Pokemon Center queue alerts, shop monitors, product drops, and
               news in one tidy dashboard.
             </p>
           </div>
@@ -464,7 +464,7 @@ function MonitorsPage({
             alt="Pokemon Center"
           />
           <div>
-            <p className="eyebrow">Access monitor</p>
+              <p className="eyebrow">Queue alerts</p>
           </div>
           <span className={`statusBadge ${pokemonCenterStatus}`}>
             {trafficBadgeLabel}
@@ -474,8 +474,9 @@ function MonitorsPage({
         <div className={`trafficCard ${pokemonCenterStatus}`}>
           <h3>{trafficData?.stock || "Checking access..."}</h3>
           <p>
-            Status: {trafficData?.httpStatus || "Checking"} | Response:{" "}
-            {trafficData?.responseTime || "Checking"}
+            {pokemonCenterStatus === "blocked"
+              ? "The checker could not read the page this time. Use the link below for a quick manual check."
+              : `Response time: ${trafficData?.responseTime || "Checking"}`}
           </p>
           <div className="trafficActions">
             <span className="refreshNote">
@@ -580,19 +581,32 @@ function MonitorCard({ store, status }) {
   const statusType = status?.status || "checking";
   const label =
     statusType === "online"
-      ? "Online"
+      ? "Checking queues"
       : statusType === "setup_needed"
-      ? "API needed"
+      ? "Links only"
       : statusType === "error"
-      ? "Blocked"
+      ? "Manual check"
       : "Checking";
+  const changedToOnline =
+    status?.accessChanged && status?.status === "online";
+  const changedLabel = changedToOnline ? "Checker online" : "Checker changed";
 
   return (
-    <div className="monitorCard">
+    <div className={status?.accessChanged ? "monitorCard changed" : "monitorCard"}>
       <div>
         <p className="storeKicker">Shop monitor</p>
         <h3>{store}</h3>
-        {status?.error && <p>{status.error}</p>}
+        {status?.accessChanged && (
+          <p className={changedToOnline ? "accessChange online" : "accessChange"}>
+            {changedLabel}
+          </p>
+        )}
+        {status?.error && (
+          <p>
+            The automatic checker could not read this shop. Use the Links page
+            for a manual check.
+          </p>
+        )}
       </div>
       <span className={`shopStatus ${statusType === "online" ? "online" : "error"}`}>
         {label}
@@ -608,16 +622,16 @@ function StoreSection({ store, items, status, loading }) {
   const statusLabel = loading
     ? "Checking"
     : needsSetup
-    ? "API needed"
+    ? "Links only"
     : hasError
-    ? "Blocked"
-    : "Online";
+    ? "Manual check"
+    : "Checking queues";
   const emptyMessage = loading
     ? "Checking stock..."
     : needsSetup
-    ? "Automatic alerts need official API credentials."
+    ? "Use the Links page for quick product searches."
     : hasError
-    ? "This shop blocked the automatic check. Use the links page."
+    ? "The automatic checker could not read this shop. Use the Links page."
     : "No new drops captured in the last 48 hours.";
 
   return (
