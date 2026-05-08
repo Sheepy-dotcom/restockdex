@@ -28,13 +28,24 @@ function formatDateTime(value) {
   });
 }
 
+function formatTime(value) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 const NAV_ITEMS = [
   { id: "monitors", label: "Monitors" },
-  { id: "drops", label: "Drops" },
-  { id: "links", label: "Links" },
+  { id: "drops", label: "Stock Drops" },
+  { id: "links", label: "Shop Links" },
   { id: "calendar", label: "Release Calendar" },
   { id: "news", label: "News" },
-  { id: "privacy", label: "Privacy Policy" },
 ];
 
 const SHOP_LINK_GROUPS = [
@@ -123,6 +134,28 @@ const SHOP_LINK_GROUPS = [
       {
         name: "Booster bundles",
         link: "https://magicmadhouse.co.uk/search.php?search_query=pokemon%20booster%20bundle",
+      },
+    ],
+  },
+  {
+    shop: "Titan Cards",
+    note: "Readable Pokemon collection feed for live stock and new listings.",
+    links: [
+      {
+        name: "Pokemon collection",
+        link: "https://titancards.co.uk/collections/pokemon",
+      },
+      {
+        name: "Booster packs",
+        link: "https://titancards.co.uk/search?q=pokemon+booster+pack",
+      },
+      {
+        name: "Elite trainer boxes",
+        link: "https://titancards.co.uk/search?q=pokemon+elite+trainer+box",
+      },
+      {
+        name: "Booster boxes",
+        link: "https://titancards.co.uk/search?q=pokemon+booster+box",
       },
     ],
   },
@@ -238,6 +271,7 @@ const NEWS_LINKS = [
 const STORE_ORDER = [
   "The Card Vault",
   "Magic Madhouse",
+  "Titan Cards",
   "Argos",
   "Very",
   "Amazon UK",
@@ -346,9 +380,17 @@ function App() {
       status: shopStatus.find((shop) => shop.store === store),
     }));
   }, [dropData, shopStatus]);
+  const liveGroupedStores = useMemo(() => {
+    return STORE_ORDER.map((store) => ({
+      store,
+      items: liveData.filter((item) => item.store?.includes(store)),
+      status: shopStatus.find((shop) => shop.store === store),
+    }));
+  }, [liveData, shopStatus]);
 
   const hotDrops = dropData.filter((item) => item.alert?.includes("KEYWORD"));
   const pokemonCenterStatus = trafficData?.accessStatus || "checking";
+  const lastCheckedLabel = formatTime(lastUpdated);
   const trafficBadgeLabel =
     pokemonCenterStatus === "busy"
       ? "Potential queue"
@@ -357,6 +399,54 @@ function App() {
       : pokemonCenterStatus === "normal"
       ? "Normal"
       : "Checking";
+  const latestAlerts = useMemo(() => {
+    const alerts = [];
+
+    if (trafficData) {
+      if (pokemonCenterStatus === "busy") {
+        alerts.push({
+          id: "pokemon-center-busy",
+          tone: "danger",
+          title: "Pokemon Center possible queue",
+          detail: "Busy signal detected. Open new releases for a quick manual check.",
+          time: trafficData.lastQueueSeenAt || lastUpdated,
+        });
+      } else if (pokemonCenterStatus === "blocked") {
+        alerts.push({
+          id: "pokemon-center-check",
+          tone: "warning",
+          title: "Pokemon Center manual check suggested",
+          detail: "The page could not be read clearly this time.",
+          time: lastUpdated,
+        });
+      } else if (pokemonCenterStatus === "normal") {
+        alerts.push({
+          id: "pokemon-center-normal",
+          tone: "success",
+          title: "Pokemon Center access looks normal",
+          detail: "No queue signal detected on the latest check.",
+          time: lastUpdated,
+        });
+      }
+    }
+
+    dropData
+      .slice()
+      .sort((a, b) => new Date(b.droppedAt || 0) - new Date(a.droppedAt || 0))
+      .slice(0, 5)
+      .forEach((item, index) => {
+        alerts.push({
+          id: `${item.link}-${index}`,
+          tone: item.alert?.includes("KEYWORD") ? "hot" : "info",
+          title: `${item.store}: new stock captured`,
+          detail: item.product,
+          time: item.droppedAt,
+          link: item.link,
+        });
+      });
+
+    return alerts.slice(0, 6);
+  }, [dropData, lastUpdated, pokemonCenterStatus, trafficData]);
 
   useEffect(() => {
     const previousStatus = lastPokemonCenterStatus.current;
@@ -447,9 +537,16 @@ function App() {
 
           <div className="heroText">
             <p>
-              Pokemon Center queue alerts, shop monitors, product drops, and
-              news in one tidy dashboard.
+              Pokemon Center queue alerts, tracked shop stock, release calendar,
+              and Pokemon news in one tidy dashboard.
             </p>
+          </div>
+
+          <div className="heroStatus">
+            <span className={`statusBadge ${pokemonCenterStatus}`}>
+              {trafficBadgeLabel}
+            </span>
+            <span>{lastCheckedLabel ? `Last checked ${lastCheckedLabel}` : "Checking now"}</span>
           </div>
 
           <div className="heroActions">
@@ -484,6 +581,7 @@ function App() {
         {activePage === "drops" && (
           <DropsPage
             groupedStores={groupedStores}
+            liveGroupedStores={liveGroupedStores}
             hotDrops={hotDrops}
             lastUpdated={lastUpdated}
             dropData={dropData}
@@ -500,6 +598,8 @@ function App() {
             pokemonCenterStatus={pokemonCenterStatus}
             trafficBadgeLabel={trafficBadgeLabel}
             trafficData={trafficData}
+            latestAlerts={latestAlerts}
+            lastCheckedLabel={lastCheckedLabel}
             notificationsEnabled={notificationsEnabled}
             onEnableNotifications={enableNotifications}
           />
@@ -517,6 +617,17 @@ function App() {
           <NewsPage newsItems={newsItems} newsUpdated={newsUpdated} />
         )}
 
+        <footer className="siteFooter">
+          <button
+            className="footerLink"
+            type="button"
+            onClick={() => setActivePage("privacy")}
+          >
+            Privacy Policy
+          </button>
+          <span>RestockDex is not affiliated with Pokemon, Nintendo, or retailers.</span>
+        </footer>
+
         {activePage === "privacy" && <PrivacyPolicyPage />}
       </div>
     </div>
@@ -525,6 +636,7 @@ function App() {
 
 function DropsPage({
   groupedStores,
+  liveGroupedStores,
   hotDrops,
   lastUpdated,
   dropData,
@@ -534,16 +646,20 @@ function DropsPage({
   return (
     <>
       <section className="statsGrid">
-        <StatCard label="Products tracked" value={liveData.length} />
-        <StatCard label="Recent drops" value={dropData.length} />
-        <StatCard label="Hot matches" value={hotDrops.length} />
+        <StatCard label="Live products" value={liveData.length} />
+        <StatCard label="48h drops" value={dropData.length} />
+        <StatCard label="Priority hits" value={hotDrops.length} />
       </section>
 
       <section className="feedPanel">
         <div className="feedHeader">
           <div>
             <p className="eyebrow">Stock tracker</p>
-            <h2>New Pokemon card stock by shop</h2>
+            <h2>48-hour drop log</h2>
+            <p className="sectionIntro">
+              Products RestockDex first spotted recently. If this is empty,
+              nothing new has been captured in the last 48 hours.
+            </p>
           </div>
           <span className="countBadge">
             {lastUpdated
@@ -564,6 +680,32 @@ function DropsPage({
               status={status}
               loading={loading}
               mode="drops"
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="feedPanel">
+        <div className="feedHeader">
+          <div>
+            <p className="eyebrow">Live stock</p>
+            <h2>Live products currently readable</h2>
+            <p className="sectionIntro">
+              These are products RestockDex can currently read as available from
+              shop pages. They may be older products, not brand-new drops.
+            </p>
+          </div>
+        </div>
+
+        <div className="shopGrid">
+          {liveGroupedStores.map(({ store, items, status }) => (
+            <StoreSection
+              key={store}
+              store={store}
+              items={items}
+              status={status}
+              loading={loading}
+              mode="live"
             />
           ))}
         </div>
@@ -613,6 +755,8 @@ function LinksPage() {
 
 function MonitorsPage({
   groupedStores,
+  latestAlerts,
+  lastCheckedLabel,
   notificationsEnabled,
   onEnableNotifications,
   pokemonCenterStatus,
@@ -645,6 +789,11 @@ function MonitorsPage({
               ? "The checker could not read the page this time. Use the link below for a quick manual check."
               : `Response time: ${trafficData?.responseTime || "Checking"}`}
           </p>
+          <div className="statusLegend" aria-label="Pokemon Center status guide">
+            <span><strong>Green</strong> normal</span>
+            <span><strong>Amber</strong> manual check</span>
+            <span><strong>Red</strong> possible queue</span>
+          </div>
           <div className="queueHistory">
             <span>Last queue recorded</span>
             <strong>{lastQueueSeen || "None since monitor started"}</strong>
@@ -654,7 +803,9 @@ function MonitorsPage({
           </div>
           <div className="trafficActions">
             <span className="refreshNote">
-              Refreshes automatically every 60 seconds
+              {lastCheckedLabel
+                ? `Last checked ${lastCheckedLabel}. Refreshes every 60 seconds.`
+                : "Refreshes automatically every 60 seconds"}
             </span>
             <button
               className="viewButton"
@@ -679,8 +830,25 @@ function MonitorsPage({
       <section className="panel">
         <div className="panelHeader">
           <div>
-            <p className="eyebrow">Shop health</p>
-            <h2>Checker status</h2>
+            <p className="eyebrow">Live feed</p>
+            <h2>Latest alerts</h2>
+          </div>
+        </div>
+
+        <div className="alertList">
+          {latestAlerts.length === 0 ? (
+            <p className="emptyText">No live alerts captured yet.</p>
+          ) : (
+            latestAlerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)
+          )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panelHeader">
+          <div>
+            <p className="eyebrow">Coverage</p>
+            <h2>Shop coverage</h2>
           </div>
         </div>
 
@@ -692,6 +860,41 @@ function MonitorsPage({
       </section>
     </>
   );
+}
+
+function AlertCard({ alert }) {
+  const alertTime = formatDateTime(alert.time);
+
+  const content = (
+    <>
+      <div>
+        <p className="storeKicker">{alertTime || "Live monitor"}</p>
+        <h3>{alert.title}</h3>
+        <p>{alert.detail}</p>
+      </div>
+      <span className={`alertTone ${alert.tone}`}>
+        {alert.tone === "danger"
+          ? "Queue"
+          : alert.tone === "warning"
+          ? "Check"
+          : alert.tone === "hot"
+          ? "Hot"
+          : alert.tone === "success"
+          ? "Normal"
+          : "Stock"}
+      </span>
+    </>
+  );
+
+  if (alert.link) {
+    return (
+      <a href={alert.link} target="_blank" rel="noreferrer" className="alertCard">
+        {content}
+      </a>
+    );
+  }
+
+  return <article className="alertCard">{content}</article>;
 }
 
 function NewsPage({ newsItems, newsUpdated }) {
@@ -880,8 +1083,8 @@ function MonitorCard({ store, status }) {
   const statusType = status?.status || "checking";
   const label =
     statusType === "online"
-      ? "Checking queues"
-      : statusType === "setup_needed"
+      ? "Automatic checks"
+    : statusType === "setup_needed"
       ? "Links only"
       : statusType === "error"
       ? "Manual check"
@@ -902,8 +1105,8 @@ function MonitorCard({ store, status }) {
         )}
         {status?.error && (
           <p>
-            The automatic checker could not read this shop. Use the Links page
-            for a manual check.
+            RestockDex could not read stock from this shop automatically. Use
+            Shop Links for a manual check.
           </p>
         )}
       </div>
@@ -919,6 +1122,7 @@ function StoreSection({ store, items, status, loading, mode = "drops" }) {
   const hasError = status?.status === "error";
   const needsSetup = status?.status === "setup_needed";
   const isDropsMode = mode === "drops";
+  const isLiveMode = mode === "live";
   const statusLabel = loading
     ? "Checking"
     : needsSetup
@@ -929,13 +1133,17 @@ function StoreSection({ store, items, status, loading, mode = "drops" }) {
       : "Manual check"
     : isDropsMode
     ? "Tracking stock"
-    : "Checking queues";
+    : isLiveMode
+    ? "Live products"
+    : "Automatic checks";
   const emptyMessage = loading
     ? "Checking stock..."
     : needsSetup
     ? "Use the Links page for quick product searches."
     : hasError
     ? "The stock checker could not read this shop. Use the Links page for a manual stock check."
+    : isLiveMode
+    ? "No live products readable from this shop right now."
     : "No new drops captured in the last 48 hours.";
 
   return (
@@ -958,7 +1166,7 @@ function StoreSection({ store, items, status, loading, mode = "drops" }) {
           {statusLabel}
         </span>
         <span className={hasItems ? "shopCount active" : "shopCount"}>
-          {items.length} recent
+          {items.length} {isLiveMode ? "live" : "recent"}
         </span>
       </summary>
 

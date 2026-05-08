@@ -13,6 +13,12 @@ const CARD_VAULT_URL =
 const MAGIC_MADHOUSE_URL =
   "https://magicmadhouse.co.uk/pokemon/pokemon-sets/phantasmal-flames";
 
+const TITAN_CARDS_URL =
+  "https://titancards.co.uk/collections/pokemon";
+
+const TITAN_CARDS_PRODUCTS_URL =
+  "https://titancards.co.uk/collections/pokemon/products.json";
+
 const CHAOS_CARDS_URL =
   "https://www.chaoscards.co.uk/brand/pokemon/sort/release-date-newest-first/cat/booster-boxes-pokemon,booster-packs-pokemon,gift-tins-pokemon,other-pokemon";
 
@@ -286,6 +292,41 @@ async function getMagicMadhouseProducts() {
   return products.slice(0, 15);
 }
 
+async function getTitanCardsProducts() {
+  const { status, html } = await fetchWithTimeout(TITAN_CARDS_PRODUCTS_URL, 8000, {
+    Accept: "application/json",
+  });
+  if (status !== 200) throw new Error(`Titan Cards returned ${status}`);
+
+  const data = JSON.parse(html);
+  const products = [];
+
+  (data.products || []).forEach((product) => {
+    const title = cleanProductName(product.title || "");
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const availableVariants = variants.filter((variant) => variant.available);
+
+    if (!title || availableVariants.length === 0) return;
+    if (!title.toLowerCase().includes("pokemon")) return;
+    if (!matchesKeyword(`${title} ${(product.tags || []).join(" ")}`)) return;
+
+    const firstAvailable = availableVariants[0];
+    const link = `https://titancards.co.uk/products/${product.handle}`;
+    const availability = firstAvailable?.price
+      ? `In stock - £${firstAvailable.price}`
+      : "In stock";
+
+    addUniqueProduct(products, {
+      product: title,
+      store: "Titan Cards",
+      availability,
+      link,
+    });
+  });
+
+  return products.slice(0, 25);
+}
+
 async function getChaosCardsProducts() {
   const { status, html } = await fetchWithTimeout(CHAOS_CARDS_URL);
   if (status !== 200) throw new Error(`Chaos Cards returned ${status}`);
@@ -435,6 +476,7 @@ async function refreshProducts() {
     const shopChecks = [
       ["The Card Vault", getCardVaultProducts],
       ["Magic Madhouse", getMagicMadhouseProducts],
+      ["Titan Cards", getTitanCardsProducts],
       ["Chaos Cards", getChaosCardsProducts],
       ["Argos", getArgosProducts],
       ["Very", getVeryProducts],
