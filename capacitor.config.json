@@ -1,0 +1,15 @@
+{
+  "appId": "com.restockdex.app",
+  "appName": "RestockDex",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#050914",
+      "showSpinner": false
+    }
+  }
+}
