@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import "./App.css";
 import logo from "./assets/restockdex-logo.png";
 import pokemonCenterLogo from "./assets/pokemon-center-white.png";
@@ -8,6 +10,9 @@ const API_URL =
 
 const POKEMON_CENTER_NEW_RELEASES =
   "https://www.pokemoncenter.com/en-gb/category/new-releases";
+const NOTIFICATIONS_KEY = "restockdex-notifications";
+const LAST_QUEUE_NOTIFICATION_KEY = "restockdex-last-queue-notification";
+const QUEUE_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
 
 const NAV_ITEMS = [
   { id: "monitors", label: "Monitors" },
@@ -239,7 +244,11 @@ function App() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [newsUpdated, setNewsUpdated] = useState(null);
   const [releaseUpdated, setReleaseUpdated] = useState(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    return localStorage.getItem(NOTIFICATIONS_KEY) === "enabled";
+  });
   const [error, setError] = useState("");
+  const lastPokemonCenterStatus = useRef(null);
 
   useEffect(() => {
     fetchAll();
@@ -334,6 +343,87 @@ function App() {
       ? "Normal"
       : "Checking";
 
+  useEffect(() => {
+    const previousStatus = lastPokemonCenterStatus.current;
+    lastPokemonCenterStatus.current = pokemonCenterStatus;
+
+    if (
+      notificationsEnabled &&
+      pokemonCenterStatus === "busy" &&
+      previousStatus &&
+      previousStatus !== "busy"
+    ) {
+      sendQueueNotification();
+    }
+  }, [notificationsEnabled, pokemonCenterStatus]);
+
+  async function enableNotifications() {
+    let webGranted = false;
+    let nativeGranted = false;
+
+    if ("Notification" in window) {
+      const permission =
+        Notification.permission === "granted"
+          ? "granted"
+          : await Notification.requestPermission();
+      webGranted = permission === "granted";
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const permissions = await LocalNotifications.requestPermissions();
+        nativeGranted = permissions.display === "granted";
+      } catch (err) {
+        console.error("Native notification permission failed:", err);
+      }
+    }
+
+    if (webGranted || nativeGranted) {
+      localStorage.setItem(NOTIFICATIONS_KEY, "enabled");
+      setNotificationsEnabled(true);
+      setError("");
+    } else {
+      setError("Notifications were not enabled. Check your browser or phone settings.");
+    }
+  }
+
+  async function sendQueueNotification() {
+    const now = Date.now();
+    const lastSent = Number(localStorage.getItem(LAST_QUEUE_NOTIFICATION_KEY) || 0);
+
+    if (now - lastSent < QUEUE_NOTIFICATION_COOLDOWN_MS) return;
+
+    localStorage.setItem(LAST_QUEUE_NOTIFICATION_KEY, String(now));
+
+    const title = "Pokemon Center queue alert";
+    const body = "Potential queue signal detected. Check Pokemon Center new releases.";
+
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, {
+        body,
+        icon: "/app-icon-192.png",
+        badge: "/app-icon-192.png",
+      });
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: Math.floor(now % 2147483647),
+              title,
+              body,
+              schedule: { at: new Date(Date.now() + 1000) },
+            },
+          ],
+        });
+      } catch (err) {
+        console.error("Native queue notification failed:", err);
+      }
+    }
+  }
+
   return (
     <div className="page">
       <div className="app">
@@ -395,6 +485,8 @@ function App() {
             pokemonCenterStatus={pokemonCenterStatus}
             trafficBadgeLabel={trafficBadgeLabel}
             trafficData={trafficData}
+            notificationsEnabled={notificationsEnabled}
+            onEnableNotifications={enableNotifications}
           />
         )}
 
@@ -504,6 +596,8 @@ function LinksPage() {
 
 function MonitorsPage({
   groupedStores,
+  notificationsEnabled,
+  onEnableNotifications,
   pokemonCenterStatus,
   trafficBadgeLabel,
   trafficData,
@@ -536,6 +630,14 @@ function MonitorsPage({
             <span className="refreshNote">
               Refreshes automatically every 60 seconds
             </span>
+            <button
+              className="viewButton"
+              disabled={notificationsEnabled}
+              onClick={onEnableNotifications}
+              type="button"
+            >
+              {notificationsEnabled ? "Notifications on" : "Enable notifications"}
+            </button>
             <a
               href={POKEMON_CENTER_NEW_RELEASES}
               target="_blank"

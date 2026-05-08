@@ -141,6 +141,12 @@ a {
   transform: none;
 }
 
+.viewButton:disabled {
+  cursor: default;
+  opacity: 0.72;
+  transform: none;
+}
+
 .pageMenu {
   display: flex;
   align-items: center;
