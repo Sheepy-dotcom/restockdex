@@ -235,6 +235,7 @@ function App() {
   const [releaseItems, setReleaseItems] = useState([]);
   const [releaseSource, setReleaseSource] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [newsUpdated, setNewsUpdated] = useState(null);
   const [releaseUpdated, setReleaseUpdated] = useState(null);
@@ -248,35 +249,61 @@ function App() {
 
   async function fetchAll() {
     try {
+      setRefreshing(true);
       setError("");
+      const fetchJson = async (path) => {
+        const response = await fetch(`${API_URL}${path}`);
+        if (!response.ok) throw new Error(`${path} returned ${response.status}`);
+        return response.json();
+      };
 
-      const [stockRes, dropsRes, trafficRes, statusRes, newsRes, releaseRes] =
-        await Promise.all([
-          fetch(`${API_URL}/stock`),
-          fetch(`${API_URL}/drops`),
-          fetch(`${API_URL}/pokemon-center-traffic`),
-          fetch(`${API_URL}/status`),
-          fetch(`${API_URL}/news`),
-          fetch(`${API_URL}/release-calendar`),
+      const [stock, drops, traffic, status, news, releases] =
+        await Promise.allSettled([
+          fetchJson("/stock"),
+          fetchJson("/drops"),
+          fetchJson("/pokemon-center-traffic"),
+          fetchJson("/status"),
+          fetchJson("/news"),
+          fetchJson("/release-calendar"),
         ]);
 
-      const stock = await stockRes.json();
-      const drops = await dropsRes.json();
-      const traffic = await trafficRes.json();
-      const status = await statusRes.json();
-      const news = await newsRes.json();
-      const releases = await releaseRes.json();
+      if (stock.status === "fulfilled") {
+        setLiveData(Array.isArray(stock.value) ? stock.value : []);
+      }
+      if (drops.status === "fulfilled") {
+        setDropData(Array.isArray(drops.value?.items) ? drops.value.items : []);
+      }
+      if (traffic.status === "fulfilled") {
+        setTrafficData(Array.isArray(traffic.value) ? traffic.value[0] : null);
+      }
+      if (status.status === "fulfilled") {
+        setShopStatus(Array.isArray(status.value?.shops) ? status.value.shops : []);
+      }
+      if (news.status === "fulfilled") {
+        setNewsItems(Array.isArray(news.value?.items) ? news.value.items : []);
+        setNewsUpdated(
+          news.value?.lastUpdated ? new Date(news.value.lastUpdated) : null
+        );
+      }
+      if (releases.status === "fulfilled") {
+        setReleaseItems(
+          Array.isArray(releases.value?.items) ? releases.value.items : []
+        );
+        setReleaseSource(releases.value?.sourceUrl || null);
+        setReleaseUpdated(
+          releases.value?.lastUpdated
+            ? new Date(releases.value.lastUpdated)
+            : null
+        );
+      }
 
-      setLiveData(Array.isArray(stock) ? stock : []);
-      setDropData(Array.isArray(drops?.items) ? drops.items : []);
-      setTrafficData(Array.isArray(traffic) ? traffic[0] : null);
-      setShopStatus(Array.isArray(status?.shops) ? status.shops : []);
-      setNewsItems(Array.isArray(news?.items) ? news.items : []);
-      setReleaseItems(Array.isArray(releases?.items) ? releases.items : []);
-      setReleaseSource(releases?.sourceUrl || null);
-      setNewsUpdated(news?.lastUpdated ? new Date(news.lastUpdated) : null);
-      setReleaseUpdated(
-        releases?.lastUpdated ? new Date(releases.lastUpdated) : null
+      const failedCount = [stock, drops, traffic, status, news, releases].filter(
+        (result) => result.status === "rejected"
+      ).length;
+      setError(
+        failedCount > 0
+          ? "Some live data could not refresh. Showing the latest available data."
+          : ""
       );
       setLastUpdated(new Date());
     } catch (err) {
@@ -284,6 +311,7 @@ function App() {
       setError("Could not connect to the RestockDex API.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
@@ -320,8 +348,13 @@ function App() {
           </div>
 
           <div className="heroActions">
-            <button className="refreshButton" onClick={fetchAll} type="button">
-              Refresh now
+            <button
+              className="refreshButton"
+              disabled={refreshing}
+              onClick={fetchAll}
+              type="button"
+            >
+              {refreshing ? "Refreshing..." : "Refresh now"}
             </button>
           </div>
         </header>
