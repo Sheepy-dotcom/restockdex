@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { id: "monitors", label: "Monitors" },
   { id: "drops", label: "Drops" },
   { id: "links", label: "Links" },
+  { id: "calendar", label: "Release Calendar" },
   { id: "news", label: "News" },
 ];
 
@@ -231,9 +232,12 @@ function App() {
   const [trafficData, setTrafficData] = useState(null);
   const [shopStatus, setShopStatus] = useState([]);
   const [newsItems, setNewsItems] = useState([]);
+  const [releaseItems, setReleaseItems] = useState([]);
+  const [releaseSource, setReleaseSource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [newsUpdated, setNewsUpdated] = useState(null);
+  const [releaseUpdated, setReleaseUpdated] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -246,26 +250,34 @@ function App() {
     try {
       setError("");
 
-      const [stockRes, dropsRes, trafficRes, statusRes, newsRes] = await Promise.all([
-        fetch(`${API_URL}/stock`),
-        fetch(`${API_URL}/drops`),
-        fetch(`${API_URL}/pokemon-center-traffic`),
-        fetch(`${API_URL}/status`),
-        fetch(`${API_URL}/news`),
-      ]);
+      const [stockRes, dropsRes, trafficRes, statusRes, newsRes, releaseRes] =
+        await Promise.all([
+          fetch(`${API_URL}/stock`),
+          fetch(`${API_URL}/drops`),
+          fetch(`${API_URL}/pokemon-center-traffic`),
+          fetch(`${API_URL}/status`),
+          fetch(`${API_URL}/news`),
+          fetch(`${API_URL}/release-calendar`),
+        ]);
 
       const stock = await stockRes.json();
       const drops = await dropsRes.json();
       const traffic = await trafficRes.json();
       const status = await statusRes.json();
       const news = await newsRes.json();
+      const releases = await releaseRes.json();
 
       setLiveData(Array.isArray(stock) ? stock : []);
       setDropData(Array.isArray(drops?.items) ? drops.items : []);
       setTrafficData(Array.isArray(traffic) ? traffic[0] : null);
       setShopStatus(Array.isArray(status?.shops) ? status.shops : []);
       setNewsItems(Array.isArray(news?.items) ? news.items : []);
+      setReleaseItems(Array.isArray(releases?.items) ? releases.items : []);
+      setReleaseSource(releases?.sourceUrl || null);
       setNewsUpdated(news?.lastUpdated ? new Date(news.lastUpdated) : null);
+      setReleaseUpdated(
+        releases?.lastUpdated ? new Date(releases.lastUpdated) : null
+      );
       setLastUpdated(new Date());
     } catch (err) {
       console.error("RestockDex fetch failed:", err);
@@ -350,6 +362,14 @@ function App() {
             pokemonCenterStatus={pokemonCenterStatus}
             trafficBadgeLabel={trafficBadgeLabel}
             trafficData={trafficData}
+          />
+        )}
+
+        {activePage === "calendar" && (
+          <ReleaseCalendarPage
+            releaseItems={releaseItems}
+            releaseSource={releaseSource}
+            releaseUpdated={releaseUpdated}
           />
         )}
 
@@ -569,6 +589,59 @@ function NewsPage({ newsItems, newsUpdated }) {
   );
 }
 
+function ReleaseCalendarPage({ releaseItems, releaseSource, releaseUpdated }) {
+  return (
+    <>
+      <section className="panel">
+        <div className="panelHeader">
+          <div>
+            <p className="eyebrow">Release calendar</p>
+            <h2>Upcoming Pokemon TCG releases</h2>
+          </div>
+          <span className="countBadge">
+            {releaseUpdated
+              ? `Updated ${releaseUpdated.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
+              : "Checking"}
+          </span>
+        </div>
+
+        {releaseItems.length === 0 ? (
+          <p className="emptyText">Checking public release calendar...</p>
+        ) : (
+          <div className="releaseGrid">
+            {releaseItems.map((item) => (
+              <ReleaseCard key={`${item.date}-${item.title}`} item={item} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panelHeader">
+          <div>
+            <p className="eyebrow">Source</p>
+            <h2>Calendar source</h2>
+          </div>
+        </div>
+
+        <div className="quickLinks">
+          <a
+            href={releaseSource || "https://pokecottage.com/pokemon-set-release-calendar"}
+            target="_blank"
+            rel="noreferrer"
+            className="viewButton"
+          >
+            View full calendar on PokeCottage
+          </a>
+        </div>
+      </section>
+    </>
+  );
+}
+
 function StatCard({ label, value }) {
   return (
     <div className="statCard">
@@ -722,6 +795,29 @@ function NewsCard({ item }) {
         {publishedDate && <span className="shopCount">{publishedDate}</span>}
         <a href={item.link} target="_blank" rel="noreferrer" className="viewButton">
           Read
+        </a>
+      </div>
+    </article>
+  );
+}
+
+function ReleaseCard({ item }) {
+  const releaseDate = new Date(`${item.date}T00:00:00`).toLocaleDateString([], {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  return (
+    <article className="newsCard releaseCard">
+      <div>
+        <p className="storeKicker">{item.source}</p>
+        <h3>{item.title}</h3>
+      </div>
+      <div className="newsFooter">
+        <span className="shopCount active">{releaseDate}</span>
+        <a href={item.link} target="_blank" rel="noreferrer" className="viewButton">
+          Source
         </a>
       </div>
     </article>

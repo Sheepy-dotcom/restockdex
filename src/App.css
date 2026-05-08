@@ -374,6 +374,7 @@ h3 {
 
 .monitorGrid,
 .newsGrid,
+.releaseGrid,
 .shopLinkGroups {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -433,6 +434,10 @@ h3 {
 .newsCard {
   align-content: space-between;
   min-height: 190px;
+}
+
+.releaseCard {
+  min-height: 150px;
 }
 
 .newsFooter {
@@ -678,6 +683,7 @@ h3 {
   .quickLinks,
   .monitorGrid,
   .newsGrid,
+  .releaseGrid,
   .shopLinkGroups {
     grid-template-columns: 1fr;
   }

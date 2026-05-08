@@ -31,6 +31,9 @@ const SMYTHS_URL =
 const POKEMON_CENTER_URL =
   "https://www.pokemoncenter.com/en-gb/category/new-releases";
 
+const POKECOTTAGE_RELEASE_CALENDAR_URL =
+  "https://pokecottage.com/pokemon-set-release-calendar";
+
 const NEWS_FEEDS = [
   {
     source: "Pokemon Database",
@@ -103,11 +106,13 @@ let cachedTraffic = [
 let cachedShopStatus = [];
 let cachedNews = [];
 let cachedDrops = [];
+let cachedReleaseCalendar = [];
 let previousShopStatus = new Map();
 let seenLinks = new Set();
 let seenLinksPrimed = false;
 let lastUpdated = null;
 let newsLastUpdated = null;
+let releaseCalendarLastUpdated = null;
 const DROP_HISTORY_MS = 48 * 60 * 60 * 1000;
 
 function setupNeeded(message) {
@@ -707,11 +712,65 @@ async function refreshNews() {
   }
 }
 
+async function refreshReleaseCalendar() {
+  const sixHours = 6 * 60 * 60 * 1000;
+  if (
+    releaseCalendarLastUpdated &&
+    Date.now() - new Date(releaseCalendarLastUpdated).getTime() < sixHours
+  ) {
+    return;
+  }
+
+  try {
+    const { status, html } = await fetchWithTimeout(
+      POKECOTTAGE_RELEASE_CALENDAR_URL,
+      8000
+    );
+    if (status !== 200) throw new Error(`PokeCottage returned ${status}`);
+
+    const items = [];
+    const eventPattern =
+      /"(\d{4}-\d{2}-\d{2})":\s*\{[\s\S]*?title:\s*"([^"]+)"[\s\S]*?link:\s*"([^"]*)"/g;
+
+    for (const match of html.matchAll(eventPattern)) {
+      const date = match[1];
+      const title = cleanNewsText(match[2]);
+      const link = match[3] && match[3] !== "#"
+        ? absoluteUrl(match[3], POKECOTTAGE_RELEASE_CALENDAR_URL)
+        : POKECOTTAGE_RELEASE_CALENDAR_URL;
+
+      if (!title) continue;
+
+      items.push({
+        title,
+        date,
+        link,
+        source: "PokeCottage",
+      });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    cachedReleaseCalendar = items
+      .filter((item, index, allItems) =>
+        allItems.findIndex(
+          (existing) => existing.date === item.date && existing.title === item.title
+        ) === index
+      )
+      .filter((item) => item.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 18);
+    releaseCalendarLastUpdated = new Date().toISOString();
+  } catch (error) {
+    console.error("Release calendar refresh failed:", error.message);
+  }
+}
+
 async function refreshAll() {
   await Promise.allSettled([
     refreshProducts(),
     refreshPokemonCenterTraffic(),
     refreshNews(),
+    refreshReleaseCalendar(),
   ]);
 }
 
@@ -763,6 +822,15 @@ app.get("/news", (req, res) => {
   res.json({
     lastUpdated: newsLastUpdated,
     items: cachedNews,
+  });
+});
+
+app.get("/release-calendar", (req, res) => {
+  res.json({
+    source: "PokeCottage",
+    sourceUrl: POKECOTTAGE_RELEASE_CALENDAR_URL,
+    lastUpdated: releaseCalendarLastUpdated,
+    items: cachedReleaseCalendar,
   });
 });
 
