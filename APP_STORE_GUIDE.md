@@ -35,8 +35,14 @@ You need:
 - Android Studio
 - Google Play Console developer account
 - A signed release build / app bundle from Android Studio
+- A public privacy policy URL, for example `https://your-vercel-domain/privacy.html`
 
 In Android Studio, open the `android` folder, create a release signing key, then build a signed Android App Bundle for upload to Google Play.
+
+The Android version is set in `android/app/build.gradle`:
+
+- `versionName "1.0.0"` is the public version users see.
+- `versionCode 1` is the Play Store build number. Increase this by 1 every time you upload a new Android build.
 
 ## iPhone / Apple App Store
 

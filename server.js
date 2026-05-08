@@ -96,9 +96,12 @@ let cachedTraffic = [
     product: "Pokémon Center Monitor",
     store: "Pokémon Center UK",
     stock: "Checking",
+    accessStatus: "checking",
     httpStatus: "Checking",
     responseTime: "Checking",
     detectedSignals: [],
+    lastQueueSeenAt: null,
+    lastQueueReason: null,
     link: POKEMON_CENTER_URL,
   },
 ];
@@ -113,6 +116,7 @@ let seenLinksPrimed = false;
 let lastUpdated = null;
 let newsLastUpdated = null;
 let releaseCalendarLastUpdated = null;
+let lastPokemonCenterQueue = null;
 const DROP_HISTORY_MS = 48 * 60 * 60 * 1000;
 
 function setupNeeded(message) {
@@ -582,6 +586,21 @@ async function refreshPokemonCenterTraffic() {
       : isBlocked
       ? "Manual check suggested"
       : "Normal";
+    const queueReason =
+      detectedSignals.length > 0
+        ? detectedSignals.join(", ")
+        : status !== 200
+        ? `site returned ${status}`
+        : responseTime > 10000
+        ? `slow response ${responseTime}ms`
+        : null;
+
+    if (isBusy) {
+      lastPokemonCenterQueue = {
+        seenAt: new Date().toISOString(),
+        reason: queueReason || "busy signal detected",
+      };
+    }
 
     cachedTraffic = [
       {
@@ -592,6 +611,8 @@ async function refreshPokemonCenterTraffic() {
         httpStatus: status,
         responseTime: `${responseTime}ms`,
         detectedSignals,
+        lastQueueSeenAt: lastPokemonCenterQueue?.seenAt || null,
+        lastQueueReason: lastPokemonCenterQueue?.reason || null,
         link: POKEMON_CENTER_URL,
       },
     ];
@@ -607,6 +628,8 @@ async function refreshPokemonCenterTraffic() {
         httpStatus: "Error",
         responseTime: "Timeout",
         detectedSignals: ["timeout or blocked"],
+        lastQueueSeenAt: lastPokemonCenterQueue?.seenAt || null,
+        lastQueueReason: lastPokemonCenterQueue?.reason || null,
         link: POKEMON_CENTER_URL,
       },
     ];

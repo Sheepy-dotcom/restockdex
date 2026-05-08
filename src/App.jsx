@@ -14,12 +14,27 @@ const NOTIFICATIONS_KEY = "restockdex-notifications";
 const LAST_QUEUE_NOTIFICATION_KEY = "restockdex-last-queue-notification";
 const QUEUE_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
 
+function formatDateTime(value) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleString([], {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 const NAV_ITEMS = [
   { id: "monitors", label: "Monitors" },
   { id: "drops", label: "Drops" },
   { id: "links", label: "Links" },
   { id: "calendar", label: "Release Calendar" },
   { id: "news", label: "News" },
+  { id: "privacy", label: "Privacy Policy" },
 ];
 
 const SHOP_LINK_GROUPS = [
@@ -501,6 +516,8 @@ function App() {
         {activePage === "news" && (
           <NewsPage newsItems={newsItems} newsUpdated={newsUpdated} />
         )}
+
+        {activePage === "privacy" && <PrivacyPolicyPage />}
       </div>
     </div>
   );
@@ -602,6 +619,8 @@ function MonitorsPage({
   trafficBadgeLabel,
   trafficData,
 }) {
+  const lastQueueSeen = formatDateTime(trafficData?.lastQueueSeenAt);
+
   return (
     <>
       <section className="panel trafficPanel">
@@ -626,6 +645,13 @@ function MonitorsPage({
               ? "The checker could not read the page this time. Use the link below for a quick manual check."
               : `Response time: ${trafficData?.responseTime || "Checking"}`}
           </p>
+          <div className="queueHistory">
+            <span>Last queue recorded</span>
+            <strong>{lastQueueSeen || "None since monitor started"}</strong>
+            {trafficData?.lastQueueReason && (
+              <p>Signal: {trafficData.lastQueueReason}</p>
+            )}
+          </div>
           <div className="trafficActions">
             <span className="refreshNote">
               Refreshes automatically every 60 seconds
@@ -774,6 +800,70 @@ function ReleaseCalendarPage({ releaseItems, releaseSource, releaseUpdated }) {
         </div>
       </section>
     </>
+  );
+}
+
+function PrivacyPolicyPage() {
+  return (
+    <section className="panel">
+      <div className="panelHeader">
+        <div>
+          <p className="eyebrow">Privacy</p>
+          <h2>Privacy Policy</h2>
+        </div>
+        <span className="countBadge">Effective May 8, 2026</span>
+      </div>
+
+      <div className="privacyContent">
+        <p>
+          RestockDex is a Pokemon stock, queue alert, release calendar, and news
+          dashboard. It does not have user accounts and it does not sell personal
+          information.
+        </p>
+
+        <h3>What the app uses</h3>
+        <ul>
+          <li>
+            The app requests notification permission only if you turn on alerts.
+          </li>
+          <li>
+            Your notification setting and recent alert timing may be stored on
+            your device so alerts do not repeat too often.
+          </li>
+          <li>
+            RestockDex connects to the RestockDex API to load shop monitors,
+            product drops, release calendar items, and news links.
+          </li>
+        </ul>
+
+        <h3>Hosting and third parties</h3>
+        <p>
+          Railway, Vercel, app stores, browsers, and linked retailer or news
+          websites may process standard technical data such as IP address,
+          device type, browser details, request times, and error logs. Retailer
+          and news links open third-party websites with their own privacy
+          policies.
+        </p>
+
+        <h3>Control</h3>
+        <p>
+          You can turn notifications off in your browser or phone settings at
+          any time. RestockDex is not affiliated with Pokemon, Nintendo, The
+          Pokemon Company, or the retailers shown in the app.
+        </p>
+
+        <div className="quickLinks">
+          <a
+            href="/privacy.html"
+            target="_blank"
+            rel="noreferrer"
+            className="viewButton"
+          >
+            Open public privacy page
+          </a>
+        </div>
+      </div>
+    </section>
   );
 }
 
