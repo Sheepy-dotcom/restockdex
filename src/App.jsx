@@ -41,11 +41,11 @@ function formatTime(value) {
 }
 
 const NAV_ITEMS = [
-  { id: "monitors", label: "Monitors" },
-  { id: "drops", label: "Stock Drops" },
-  { id: "links", label: "Shop Links" },
-  { id: "calendar", label: "Release Calendar" },
-  { id: "news", label: "News" },
+  { id: "monitors", label: "Monitor", icon: "monitor" },
+  { id: "drops", label: "Drops", icon: "drops" },
+  { id: "links", label: "Links", icon: "links" },
+  { id: "calendar", label: "Calendar", icon: "calendar" },
+  { id: "news", label: "News", icon: "news" },
 ];
 
 const SHOP_LINK_GROUPS = [
@@ -281,7 +281,6 @@ const STORE_ORDER = [
 
 function App() {
   const [activePage, setActivePage] = useState("monitors");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [liveData, setLiveData] = useState([]);
   const [dropData, setDropData] = useState([]);
   const [trafficData, setTrafficData] = useState(null);
@@ -390,8 +389,6 @@ function App() {
   }, [liveData, shopStatus]);
 
   const hotDrops = dropData.filter((item) => item.alert?.includes("KEYWORD"));
-  const selectedNavItem =
-    NAV_ITEMS.find((item) => item.id === activePage) || NAV_ITEMS[0];
   const pokemonCenterStatus = trafficData?.accessStatus || "checking";
   const lastCheckedLabel = formatTime(lastUpdated);
   const trafficBadgeLabel =
@@ -556,39 +553,6 @@ function App() {
           </div>
         </header>
 
-        <nav className="pageMenu" aria-label="RestockDex pages">
-          <button
-            className="menuButton"
-            type="button"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((isOpen) => !isOpen)}
-          >
-            <span>
-              <small>Menu</small>
-              {selectedNavItem.label}
-            </span>
-            <strong>{menuOpen ? "Close" : "Open"}</strong>
-          </button>
-
-          {menuOpen && (
-            <div className="menuPanel">
-              {NAV_ITEMS.map((item) => (
-                <button
-                  key={item.id}
-                  className={item.id === activePage ? "menuItem active" : "menuItem"}
-                  type="button"
-                  onClick={() => {
-                    setActivePage(item.id);
-                    setMenuOpen(false);
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </nav>
-
         {error && <div className="errorBox">{error}</div>}
 
         {activePage === "drops" && (
@@ -642,8 +606,77 @@ function App() {
         </footer>
 
         {activePage === "privacy" && <PrivacyPolicyPage />}
+
+        <nav className="bottomTabs" aria-label="RestockDex pages">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              className={item.id === activePage ? "bottomTab active" : "bottomTab"}
+              type="button"
+              onClick={() => setActivePage(item.id)}
+            >
+              <TabIcon name={item.icon} />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
     </div>
+  );
+}
+
+function TabIcon({ name }) {
+  const icons = {
+    monitor: (
+      <>
+        <path d="M4 5h16v10H4z" />
+        <path d="M9 19h6" />
+        <path d="M12 15v4" />
+        <path d="M7 10h3l2-3 2 6 2-3h1" />
+      </>
+    ),
+    drops: (
+      <>
+        <path d="M6 5h12l2 4v10H4V9z" />
+        <path d="M6 9h12" />
+        <path d="M9 13h6" />
+        <path d="M9 16h4" />
+      </>
+    ),
+    links: (
+      <>
+        <path d="M9 7H6a4 4 0 0 0 0 8h3" />
+        <path d="M15 7h3a4 4 0 0 1 0 8h-3" />
+        <path d="M8 12h8" />
+      </>
+    ),
+    calendar: (
+      <>
+        <path d="M5 6h14v14H5z" />
+        <path d="M5 10h14" />
+        <path d="M8 4v4" />
+        <path d="M16 4v4" />
+        <path d="M8 14h2" />
+        <path d="M13 14h2" />
+        <path d="M8 17h2" />
+      </>
+    ),
+    news: (
+      <>
+        <path d="M5 5h14v14H5z" />
+        <path d="M8 9h8" />
+        <path d="M8 12h8" />
+        <path d="M8 15h5" />
+      </>
+    ),
+  };
+
+  return (
+    <span className="tabIcon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        {icons[name]}
+      </svg>
+    </span>
   );
 }
 
