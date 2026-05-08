@@ -159,44 +159,88 @@ a {
 }
 
 .pageMenu {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   position: sticky;
   top: 0;
   z-index: 10;
   margin: 14px 0 16px;
-  padding: 10px;
-  border: 1px solid rgba(79, 163, 255, 0.18);
-  border-radius: 8px;
-  background: rgba(4, 10, 23, 0.92);
-  backdrop-filter: blur(14px);
+  display: grid;
+  gap: 8px;
 }
 
-.pageMenu label {
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 10px 12px;
+  border: 1px solid rgba(79, 163, 255, 0.34);
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(4, 10, 23, 0.94);
+  backdrop-filter: blur(14px);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.menuButton:focus {
+  outline: none;
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 3px rgba(255, 213, 36, 0.12);
+}
+
+.menuButton span {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.menuButton small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.pageMenu select {
-  flex: 1;
-  min-height: 40px;
-  border: 1px solid rgba(79, 163, 255, 0.34);
-  border-radius: 8px;
+.menuButton strong {
+  padding: 7px 9px;
+  border: 1px solid rgba(79, 163, 255, 0.28);
+  border-radius: 999px;
   color: #cfe8ff;
-  background: rgba(8, 26, 52, 0.86);
-  font: inherit;
-  font-weight: 900;
-  cursor: pointer;
-  outline: none;
-  padding: 0 12px;
+  background: rgba(24, 111, 211, 0.14);
+  font-size: 12px;
 }
 
-.pageMenu select:focus {
+.menuPanel {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(79, 163, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(4, 10, 23, 0.96);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(14px);
+}
+
+.menuItem {
+  min-height: 42px;
+  border: 1px solid rgba(79, 163, 255, 0.22);
+  border-radius: 8px;
+  color: #cfe8ff;
+  background: rgba(8, 26, 52, 0.66);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.menuItem.active {
+  color: #171000;
   border-color: var(--yellow);
-  box-shadow: 0 0 0 3px rgba(255, 213, 36, 0.12);
+  background: var(--yellow);
 }
 
 .statsGrid {
@@ -386,7 +430,7 @@ h3 {
   gap: 8px;
 }
 
-.statusLegend span {
+.legendChip {
   padding: 7px 9px;
   border: 1px solid rgba(79, 163, 255, 0.2);
   border-radius: 999px;
@@ -396,8 +440,34 @@ h3 {
   font-weight: 900;
 }
 
-.statusLegend strong {
+.legendChip strong {
   color: #ffffff;
+}
+
+.legendChip.green {
+  color: #062512;
+  border-color: rgba(134, 239, 172, 0.7);
+  background: #86efac;
+}
+
+.legendChip.green strong {
+  color: #062512;
+}
+
+.legendChip.amber {
+  color: #271b00;
+  border-color: rgba(255, 213, 36, 0.82);
+  background: #ffd524;
+}
+
+.legendChip.amber strong {
+  color: #271b00;
+}
+
+.legendChip.red {
+  color: #fff0f0;
+  border-color: rgba(252, 165, 165, 0.75);
+  background: #e52a2a;
 }
 
 .queueHistory {
@@ -579,6 +649,25 @@ h3 {
 .newsCard {
   align-content: space-between;
   min-height: 190px;
+}
+
+.featuredNewsCard {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  min-height: 180px;
+  margin-bottom: 12px;
+  border-color: rgba(255, 213, 36, 0.32);
+  background:
+    linear-gradient(135deg, rgba(94, 69, 0, 0.26), rgba(6, 15, 31, 0.9)),
+    var(--panel);
+}
+
+.featuredNewsCard h3 {
+  font-size: 22px;
+}
+
+.compactNewsGrid .newsCard {
+  min-height: 150px;
 }
 
 .releaseCard {
@@ -849,6 +938,7 @@ h3 {
 
   .statsGrid,
   .quickLinks,
+  .menuPanel,
   .monitorGrid,
   .newsGrid,
   .releaseGrid,
@@ -873,6 +963,7 @@ h3 {
   .dropCard,
   .monitorCard,
   .alertCard,
+  .featuredNewsCard,
   .newsFooter {
     grid-template-columns: 1fr;
   }

@@ -281,6 +281,7 @@ const STORE_ORDER = [
 
 function App() {
   const [activePage, setActivePage] = useState("monitors");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [liveData, setLiveData] = useState([]);
   const [dropData, setDropData] = useState([]);
   const [trafficData, setTrafficData] = useState(null);
@@ -389,6 +390,8 @@ function App() {
   }, [liveData, shopStatus]);
 
   const hotDrops = dropData.filter((item) => item.alert?.includes("KEYWORD"));
+  const selectedNavItem =
+    NAV_ITEMS.find((item) => item.id === activePage) || NAV_ITEMS[0];
   const pokemonCenterStatus = trafficData?.accessStatus || "checking";
   const lastCheckedLabel = formatTime(lastUpdated);
   const trafficBadgeLabel =
@@ -417,14 +420,6 @@ function App() {
           tone: "warning",
           title: "Pokemon Center manual check suggested",
           detail: "The page could not be read clearly this time.",
-          time: lastUpdated,
-        });
-      } else if (pokemonCenterStatus === "normal") {
-        alerts.push({
-          id: "pokemon-center-normal",
-          tone: "success",
-          title: "Pokemon Center access looks normal",
-          detail: "No queue signal detected on the latest check.",
           time: lastUpdated,
         });
       }
@@ -562,18 +557,36 @@ function App() {
         </header>
 
         <nav className="pageMenu" aria-label="RestockDex pages">
-          <label htmlFor="page-select">Menu</label>
-          <select
-            id="page-select"
-            value={activePage}
-            onChange={(event) => setActivePage(event.target.value)}
+          <button
+            className="menuButton"
+            type="button"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((isOpen) => !isOpen)}
           >
-            {NAV_ITEMS.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+            <span>
+              <small>Menu</small>
+              {selectedNavItem.label}
+            </span>
+            <strong>{menuOpen ? "Close" : "Open"}</strong>
+          </button>
+
+          {menuOpen && (
+            <div className="menuPanel">
+              {NAV_ITEMS.map((item) => (
+                <button
+                  key={item.id}
+                  className={item.id === activePage ? "menuItem active" : "menuItem"}
+                  type="button"
+                  onClick={() => {
+                    setActivePage(item.id);
+                    setMenuOpen(false);
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
 
         {error && <div className="errorBox">{error}</div>}
@@ -790,9 +803,9 @@ function MonitorsPage({
               : `Response time: ${trafficData?.responseTime || "Checking"}`}
           </p>
           <div className="statusLegend" aria-label="Pokemon Center status guide">
-            <span><strong>Green</strong> normal</span>
-            <span><strong>Amber</strong> manual check</span>
-            <span><strong>Red</strong> possible queue</span>
+            <span className="legendChip green"><strong>Green</strong> Normal</span>
+            <span className="legendChip amber"><strong>Amber</strong> Manual check</span>
+            <span className="legendChip red"><strong>Red</strong> Possible queue</span>
           </div>
           <div className="queueHistory">
             <span>Last queue recorded</span>
@@ -837,7 +850,7 @@ function MonitorsPage({
 
         <div className="alertList">
           {latestAlerts.length === 0 ? (
-            <p className="emptyText">No live alerts captured yet.</p>
+            <p className="emptyText">No alerts right now. RestockDex is checking every 60 seconds.</p>
           ) : (
             latestAlerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)
           )}
@@ -898,6 +911,8 @@ function AlertCard({ alert }) {
 }
 
 function NewsPage({ newsItems, newsUpdated }) {
+  const [featuredItem, ...otherItems] = newsItems;
+
   return (
     <>
       <section className="panel">
@@ -919,11 +934,16 @@ function NewsPage({ newsItems, newsUpdated }) {
         {newsItems.length === 0 ? (
           <p className="emptyText">Checking public news feeds...</p>
         ) : (
-          <div className="newsGrid">
-            {newsItems.map((item) => (
-              <NewsCard key={item.link} item={item} />
-            ))}
-          </div>
+          <>
+            <NewsCard item={featuredItem} featured />
+            {otherItems.length > 0 && (
+              <div className="newsGrid compactNewsGrid">
+                {otherItems.map((item) => (
+                  <NewsCard key={item.link} item={item} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 
@@ -1209,7 +1229,7 @@ function DropCard({ item }) {
   );
 }
 
-function NewsCard({ item }) {
+function NewsCard({ item, featured = false }) {
   const publishedDate = item.publishedAt
     ? new Date(item.publishedAt).toLocaleDateString([], {
         day: "2-digit",
@@ -1218,7 +1238,7 @@ function NewsCard({ item }) {
     : "";
 
   return (
-    <article className="newsCard">
+    <article className={featured ? "newsCard featuredNewsCard" : "newsCard"}>
       <div>
         <p className="storeKicker">{item.source}</p>
         <h3>{item.title}</h3>
