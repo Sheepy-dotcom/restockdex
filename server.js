@@ -1,11 +1,16 @@
 import express from "express";
 import cors from "cors";
 import * as cheerio from "cheerio";
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
 
 const app = express();
 app.use(cors());
 
 const PORT = process.env.PORT || 8080;
+const QUEUE_HISTORY_FILE =
+  process.env.QUEUE_HISTORY_FILE ||
+  path.join(process.cwd(), "data", "queue-history.json");
 
 const CARD_VAULT_URL =
   "https://thecardvault.co.uk/collections/pokemon-new-releases";
@@ -123,7 +128,10 @@ let lastUpdated = null;
 let newsLastUpdated = null;
 let releaseCalendarLastUpdated = null;
 let lastPokemonCenterQueue = null;
+let lastPokemonCenterAccessStatus = "checking";
+let queueHistory = [];
 const DROP_HISTORY_MS = 48 * 60 * 60 * 1000;
+const QUEUE_HISTORY_LIMIT = 50;
 
 function setupNeeded(message) {
   const error = new Error(message);
@@ -213,6 +221,40 @@ function addUniqueProduct(products, product) {
 function pruneRecentDrops(drops) {
   const cutoff = Date.now() - DROP_HISTORY_MS;
   return drops.filter((drop) => new Date(drop.droppedAt).getTime() >= cutoff);
+}
+
+async function loadQueueHistory() {
+  try {
+    const data = JSON.parse(await readFile(QUEUE_HISTORY_FILE, "utf8"));
+    queueHistory = Array.isArray(data.events) ? data.events : [];
+    lastPokemonCenterQueue = queueHistory[0] || null;
+    console.log(`Loaded ${queueHistory.length} Pokemon Center queue events`);
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      console.error("Queue history load failed:", error.message);
+    }
+  }
+}
+
+async function saveQueueHistory() {
+  try {
+    await mkdir(path.dirname(QUEUE_HISTORY_FILE), { recursive: true });
+    await writeFile(
+      QUEUE_HISTORY_FILE,
+      JSON.stringify({ events: queueHistory }, null, 2)
+    );
+  } catch (error) {
+    console.error("Queue history save failed:", error.message);
+  }
+}
+
+async function recordPokemonCenterQueue(event) {
+  const alreadyLatest = queueHistory[0]?.seenAt === event.seenAt;
+  if (alreadyLatest) return;
+
+  queueHistory = [event, ...queueHistory].slice(0, QUEUE_HISTORY_LIMIT);
+  lastPokemonCenterQueue = queueHistory[0];
+  await saveQueueHistory();
 }
 
 async function getCardVaultProducts() {
@@ -637,12 +679,17 @@ async function refreshPokemonCenterTraffic() {
         ? `slow response ${responseTime}ms`
         : null;
 
-    if (isBusy) {
-      lastPokemonCenterQueue = {
+    if (isBusy && lastPokemonCenterAccessStatus !== "busy") {
+      await recordPokemonCenterQueue({
         seenAt: new Date().toISOString(),
         reason: queueReason || "busy signal detected",
-      };
+        httpStatus: status,
+        responseTime: `${responseTime}ms`,
+        detectedSignals,
+        link: POKEMON_CENTER_URL,
+      });
     }
+    lastPokemonCenterAccessStatus = accessStatus;
 
     cachedTraffic = [
       {
@@ -661,6 +708,7 @@ async function refreshPokemonCenterTraffic() {
 
     console.log("Traffic cache updated:", cachedTraffic[0].stock);
   } catch (error) {
+    lastPokemonCenterAccessStatus = "blocked";
     cachedTraffic = [
       {
         product: "Pokémon Center Monitor",
@@ -839,6 +887,7 @@ async function refreshAll() {
   ]);
 }
 
+await loadQueueHistory();
 refreshAll();
 setInterval(refreshAll, 60000);
 
@@ -881,6 +930,13 @@ app.get("/drops", (req, res) => {
 
 app.get("/pokemon-center-traffic", (req, res) => {
   res.json(cachedTraffic);
+});
+
+app.get("/pokemon-center-queue-history", (req, res) => {
+  res.json({
+    lastQueue: lastPokemonCenterQueue,
+    events: queueHistory,
+  });
 });
 
 app.get("/news", (req, res) => {

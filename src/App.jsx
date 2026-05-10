@@ -40,6 +40,19 @@ function formatTime(value) {
   });
 }
 
+function daysUntilDate(value) {
+  if (!value) return null;
+
+  const today = new Date();
+  const releaseDate = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(releaseDate.getTime())) return null;
+
+  today.setHours(0, 0, 0, 0);
+  releaseDate.setHours(0, 0, 0, 0);
+
+  return Math.round((releaseDate - today) / 86400000);
+}
+
 const NAV_ITEMS = [
   { id: "monitors", label: "Monitor", icon: "monitor" },
   { id: "drops", label: "Drops", icon: "drops" },
@@ -399,6 +412,15 @@ function App() {
       : pokemonCenterStatus === "normal"
       ? "Normal"
       : "Checking";
+  const pokemonCenterWatchItems = useMemo(() => {
+    return releaseItems
+      .map((item) => ({
+        ...item,
+        daysUntil: daysUntilDate(item.date),
+      }))
+      .filter((item) => item.daysUntil !== null && item.daysUntil >= 0 && item.daysUntil <= 7)
+      .slice(0, 3);
+  }, [releaseItems]);
   const latestAlerts = useMemo(() => {
     const alerts = [];
 
@@ -408,7 +430,9 @@ function App() {
           id: "pokemon-center-busy",
           tone: "danger",
           title: "Pokemon Center possible queue",
-          detail: "Busy signal detected. Open new releases for a quick manual check.",
+          detail: pokemonCenterWatchItems.length
+            ? "Busy signal detected during a release watch window."
+            : "Busy signal detected. Open new releases for a quick manual check.",
           time: trafficData.lastQueueSeenAt || lastUpdated,
         });
       } else if (pokemonCenterStatus === "blocked") {
@@ -438,7 +462,7 @@ function App() {
       });
 
     return alerts.slice(0, 6);
-  }, [dropData, lastUpdated, pokemonCenterStatus, trafficData]);
+  }, [dropData, lastUpdated, pokemonCenterStatus, pokemonCenterWatchItems.length, trafficData]);
 
   useEffect(() => {
     const previousStatus = lastPokemonCenterStatus.current;
@@ -579,6 +603,7 @@ function App() {
             lastCheckedLabel={lastCheckedLabel}
             notificationsEnabled={notificationsEnabled}
             onEnableNotifications={enableNotifications}
+            watchItems={pokemonCenterWatchItems}
           />
         )}
 
@@ -808,8 +833,18 @@ function MonitorsPage({
   pokemonCenterStatus,
   trafficBadgeLabel,
   trafficData,
+  watchItems,
 }) {
   const lastQueueSeen = formatDateTime(trafficData?.lastQueueSeenAt);
+  const primaryWatchItem = watchItems[0];
+  const watchLabel =
+    primaryWatchItem?.daysUntil === 0
+      ? "Today"
+      : primaryWatchItem?.daysUntil === 1
+      ? "Tomorrow"
+      : primaryWatchItem
+      ? `${primaryWatchItem.daysUntil} days`
+      : null;
 
   return (
     <>
@@ -827,6 +862,27 @@ function MonitorsPage({
             {trafficBadgeLabel}
           </span>
         </div>
+
+        {primaryWatchItem && (
+          <div className="watchCard">
+            <span className="watchBadge">Watch mode</span>
+            <div>
+              <h3>{primaryWatchItem.title}</h3>
+              <p>
+                {watchLabel} on the release calendar. Keep an eye on Pokemon
+                Center new releases and queue status.
+              </p>
+            </div>
+            <a
+              href={POKEMON_CENTER_NEW_RELEASES}
+              target="_blank"
+              rel="noreferrer"
+              className="viewButton"
+            >
+              Check Pokemon Center
+            </a>
+          </div>
+        )}
 
         <div className={`trafficCard ${pokemonCenterStatus}`}>
           <h3>{trafficData?.stock || "Checking access..."}</h3>
