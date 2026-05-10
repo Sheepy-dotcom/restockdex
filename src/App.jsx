@@ -888,7 +888,7 @@ function MonitorsPage({
           <h3>{trafficData?.stock || "Checking access..."}</h3>
           <p>
             {pokemonCenterStatus === "blocked"
-              ? "The checker could not read the page this time. Use the link below for a quick manual check."
+              ? "Pokemon Center has been unclear for around 10 minutes. Use the link below for a manual check."
               : `Response time: ${trafficData?.responseTime || "Checking"}`}
           </p>
           <div className="statusLegend" aria-label="Pokemon Center status guide">

@@ -129,9 +129,11 @@ let newsLastUpdated = null;
 let releaseCalendarLastUpdated = null;
 let lastPokemonCenterQueue = null;
 let lastPokemonCenterAccessStatus = "checking";
+let pokemonCenterUnclearChecks = 0;
 let queueHistory = [];
 const DROP_HISTORY_MS = 48 * 60 * 60 * 1000;
 const QUEUE_HISTORY_LIMIT = 50;
+const POKEMON_CENTER_UNCLEAR_LIMIT = 10;
 
 function setupNeeded(message) {
   const error = new Error(message);
@@ -663,11 +665,13 @@ async function refreshPokemonCenterTraffic() {
       responseTime > 10000 ||
       hasQueueSignal ||
       detectedSignals.length >= 3;
-    const isBlocked = status === 403;
-    const accessStatus = isBusy ? "busy" : isBlocked ? "blocked" : "normal";
+    const isUnclear = status === 403;
+    pokemonCenterUnclearChecks = isBusy || !isUnclear ? 0 : pokemonCenterUnclearChecks + 1;
+    const showUnclear = pokemonCenterUnclearChecks >= POKEMON_CENTER_UNCLEAR_LIMIT;
+    const accessStatus = isBusy ? "busy" : showUnclear ? "blocked" : "normal";
     const statusText = isBusy
       ? "Potential queue / busy"
-      : isBlocked
+      : showUnclear
       ? "Manual check suggested"
       : "Normal";
     const queueReason =
@@ -700,6 +704,8 @@ async function refreshPokemonCenterTraffic() {
         httpStatus: status,
         responseTime: `${responseTime}ms`,
         detectedSignals,
+        unclearChecks: pokemonCenterUnclearChecks,
+        unclearLimit: POKEMON_CENTER_UNCLEAR_LIMIT,
         lastQueueSeenAt: lastPokemonCenterQueue?.seenAt || null,
         lastQueueReason: lastPokemonCenterQueue?.reason || null,
         link: POKEMON_CENTER_URL,
@@ -708,16 +714,20 @@ async function refreshPokemonCenterTraffic() {
 
     console.log("Traffic cache updated:", cachedTraffic[0].stock);
   } catch (error) {
-    lastPokemonCenterAccessStatus = "blocked";
+    pokemonCenterUnclearChecks += 1;
+    const showUnclear = pokemonCenterUnclearChecks >= POKEMON_CENTER_UNCLEAR_LIMIT;
+    lastPokemonCenterAccessStatus = showUnclear ? "blocked" : "normal";
     cachedTraffic = [
       {
         product: "Pokémon Center Monitor",
         store: "Pokémon Center UK",
-        stock: "Manual check suggested",
-        accessStatus: "blocked",
+        stock: showUnclear ? "Manual check suggested" : "Normal",
+        accessStatus: showUnclear ? "blocked" : "normal",
         httpStatus: "Error",
         responseTime: "Timeout",
         detectedSignals: ["timeout or blocked"],
+        unclearChecks: pokemonCenterUnclearChecks,
+        unclearLimit: POKEMON_CENTER_UNCLEAR_LIMIT,
         lastQueueSeenAt: lastPokemonCenterQueue?.seenAt || null,
         lastQueueReason: lastPokemonCenterQueue?.reason || null,
         link: POKEMON_CENTER_URL,
