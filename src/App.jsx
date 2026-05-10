@@ -11,8 +11,16 @@ const API_URL =
 const POKEMON_CENTER_NEW_RELEASES =
   "https://www.pokemoncenter.com/en-gb/category/new-releases";
 const NOTIFICATIONS_KEY = "restockdex-notifications";
+const NOTIFICATION_PREFS_KEY = "restockdex-notification-prefs";
 const LAST_QUEUE_NOTIFICATION_KEY = "restockdex-last-queue-notification";
+const LAST_DROP_NOTIFICATION_KEY = "restockdex-last-drop-notification";
 const QUEUE_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
+
+const DEFAULT_NOTIFICATION_PREFS = {
+  queue: true,
+  drops: true,
+  priority: true,
+};
 
 function formatDateTime(value) {
   if (!value) return null;
@@ -309,8 +317,19 @@ function App() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     return localStorage.getItem(NOTIFICATIONS_KEY) === "enabled";
   });
+  const [notificationPrefs, setNotificationPrefs] = useState(() => {
+    try {
+      return {
+        ...DEFAULT_NOTIFICATION_PREFS,
+        ...JSON.parse(localStorage.getItem(NOTIFICATION_PREFS_KEY) || "{}"),
+      };
+    } catch {
+      return DEFAULT_NOTIFICATION_PREFS;
+    }
+  });
   const [error, setError] = useState("");
   const lastPokemonCenterStatus = useRef(null);
+  const seenDropNotificationLinks = useRef(new Set());
 
   useEffect(() => {
     fetchAll();
@@ -474,9 +493,53 @@ function App() {
       previousStatus &&
       previousStatus !== "busy"
     ) {
-      sendQueueNotification();
+      sendNotification({
+        storageKey: LAST_QUEUE_NOTIFICATION_KEY,
+        title: "Pokemon Center queue alert",
+        body: "Potential queue signal detected. Check Pokemon Center new releases.",
+        cooldownMs: QUEUE_NOTIFICATION_COOLDOWN_MS,
+      });
     }
   }, [notificationsEnabled, pokemonCenterStatus]);
+
+  useEffect(() => {
+    if (!notificationsEnabled) return;
+
+    const newDrops = dropData.filter((item) => {
+      if (!item.link || seenDropNotificationLinks.current.has(item.link)) return false;
+      return item.stock?.includes("NEW") || item.droppedAt;
+    });
+
+    if (newDrops.length === 0) return;
+
+    newDrops.forEach((item) => seenDropNotificationLinks.current.add(item.link));
+
+    const priorityDrops = newDrops.filter((item) =>
+      item.alert?.includes("KEYWORD")
+    );
+    const shouldSendPriority = notificationPrefs.priority && priorityDrops.length > 0;
+    const shouldSendDrops = notificationPrefs.drops && newDrops.length > 0;
+
+    if (!shouldSendPriority && !shouldSendDrops) return;
+
+    const alertItem = shouldSendPriority ? priorityDrops[0] : newDrops[0];
+    sendNotification({
+      storageKey: LAST_DROP_NOTIFICATION_KEY,
+      title: shouldSendPriority ? "Priority Pokemon stock" : "New Pokemon stock",
+      body: `${alertItem.store}: ${alertItem.product}`,
+      cooldownMs: 0,
+    });
+  }, [dropData, notificationPrefs.drops, notificationPrefs.priority, notificationsEnabled]);
+
+  function updateNotificationPref(key) {
+    const nextPrefs = {
+      ...notificationPrefs,
+      [key]: !notificationPrefs[key],
+    };
+
+    setNotificationPrefs(nextPrefs);
+    localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(nextPrefs));
+  }
 
   async function enableNotifications() {
     let webGranted = false;
@@ -508,16 +571,13 @@ function App() {
     }
   }
 
-  async function sendQueueNotification() {
+  async function sendNotification({ storageKey, title, body, cooldownMs = 0 }) {
     const now = Date.now();
-    const lastSent = Number(localStorage.getItem(LAST_QUEUE_NOTIFICATION_KEY) || 0);
+    const lastSent = Number(localStorage.getItem(storageKey) || 0);
 
-    if (now - lastSent < QUEUE_NOTIFICATION_COOLDOWN_MS) return;
+    if (cooldownMs && now - lastSent < cooldownMs) return;
 
-    localStorage.setItem(LAST_QUEUE_NOTIFICATION_KEY, String(now));
-
-    const title = "Pokemon Center queue alert";
-    const body = "Potential queue signal detected. Check Pokemon Center new releases.";
+    localStorage.setItem(storageKey, String(now));
 
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification(title, {
@@ -588,6 +648,10 @@ function App() {
             dropData={dropData}
             liveData={liveData}
             loading={loading}
+            notificationPrefs={notificationPrefs}
+            notificationsEnabled={notificationsEnabled}
+            onEnableNotifications={enableNotifications}
+            onToggleNotification={updateNotificationPref}
           />
         )}
 
@@ -713,6 +777,10 @@ function DropsPage({
   dropData,
   liveData,
   loading,
+  notificationPrefs,
+  notificationsEnabled,
+  onEnableNotifications,
+  onToggleNotification,
 }) {
   return (
     <>
@@ -720,6 +788,33 @@ function DropsPage({
         <StatCard label="Live products" value={liveData.length} />
         <StatCard label="48h drops" value={dropData.length} />
         <StatCard label="Priority hits" value={hotDrops.length} />
+      </section>
+
+      <section className="notificationSettings pageNotificationSettings">
+        <div>
+          <p className="storeKicker">Drop notifications</p>
+          <h3>Stock alert settings</h3>
+        </div>
+        <button
+          className="viewButton"
+          disabled={notificationsEnabled}
+          onClick={onEnableNotifications}
+          type="button"
+        >
+          {notificationsEnabled ? "Notifications on" : "Enable notifications"}
+        </button>
+        <div className="toggleGrid">
+          <NotificationToggle
+            checked={notificationPrefs.drops}
+            label="Stock drops"
+            onClick={() => onToggleNotification("drops")}
+          />
+          <NotificationToggle
+            checked={notificationPrefs.priority}
+            label="Priority hits"
+            onClick={() => onToggleNotification("priority")}
+          />
+        </div>
       </section>
 
       <section className="feedPanel">
@@ -909,14 +1004,6 @@ function MonitorsPage({
                 ? `Last checked ${lastCheckedLabel}. Refreshes every 60 seconds.`
                 : "Refreshes automatically every 60 seconds"}
             </span>
-            <button
-              className="viewButton"
-              disabled={notificationsEnabled}
-              onClick={onEnableNotifications}
-              type="button"
-            >
-              {notificationsEnabled ? "Notifications on" : "Enable notifications"}
-            </button>
             <a
               href={POKEMON_CENTER_NEW_RELEASES}
               target="_blank"
@@ -925,6 +1012,24 @@ function MonitorsPage({
             >
               Pokemon Center new releases
             </a>
+          </div>
+          <div className="notificationSettings monitorNotificationSettings">
+            <div>
+              <p className="storeKicker">Automatic check notifications</p>
+              <h3>Pokemon Center queue alerts</h3>
+              <p>
+                Get a notification when the monitor sees a strong possible queue
+                signal.
+              </p>
+            </div>
+            <button
+              className="viewButton"
+              disabled={notificationsEnabled}
+              onClick={onEnableNotifications}
+              type="button"
+            >
+              {notificationsEnabled ? "Notifications on" : "Enable notifications"}
+            </button>
           </div>
         </div>
       </section>
@@ -961,6 +1066,20 @@ function MonitorsPage({
         </div>
       </section>
     </>
+  );
+}
+
+function NotificationToggle({ checked, label, onClick }) {
+  return (
+    <button
+      className={checked ? "toggleButton active" : "toggleButton"}
+      type="button"
+      aria-pressed={checked}
+      onClick={onClick}
+    >
+      <span>{label}</span>
+      <strong>{checked ? "On" : "Off"}</strong>
+    </button>
   );
 }
 
