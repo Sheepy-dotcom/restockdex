@@ -1015,12 +1015,9 @@ function MonitorsPage({
           </div>
           <div className="notificationSettings monitorNotificationSettings">
             <div>
-              <p className="storeKicker">Automatic check notifications</p>
-              <h3>Pokemon Center queue alerts</h3>
-              <p>
-                Get a notification when the monitor sees a strong possible queue
-                signal.
-              </p>
+              <p className="storeKicker">Notifications</p>
+              <h3>Queue alerts</h3>
+              <p>Notify me when Pokemon Center looks busy.</p>
             </div>
             <button
               className="viewButton"
