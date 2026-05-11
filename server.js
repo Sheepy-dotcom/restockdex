@@ -24,6 +24,20 @@ const TITAN_CARDS_URL =
 const TITAN_CARDS_PRODUCTS_URL =
   "https://titancards.co.uk/collections/pokemon/products.json";
 
+const JAPAN2UK_URL =
+  "https://www.japan2uk.com/pages/japanese-pokemon-products-home";
+
+const JAPAN2UK_PRODUCT_FEEDS = [
+  "https://www.japan2uk.com/collections/pokemon-japanese-booster-boxes/products.json",
+  "https://www.japan2uk.com/collections/pokemon-japanese-booster-packs/products.json",
+  "https://www.japan2uk.com/collections/pokemon-japanese-decks-sets-magazines/products.json",
+  "https://www.japan2uk.com/collections/pokemon-english-booster-boxes/products.json",
+  "https://www.japan2uk.com/collections/pokemon-english-booster-packs/products.json",
+  "https://www.japan2uk.com/collections/pokemon-english-elite-trainer-boxes/products.json",
+  "https://www.japan2uk.com/collections/pokemon-english-collection-boxes/products.json",
+  "https://www.japan2uk.com/collections/pokemon-english-tins-blisters/products.json",
+];
+
 const CHAOS_CARDS_URL =
   "https://www.chaoscards.co.uk/brand/pokemon/sort/release-date-newest-first/cat/booster-boxes-pokemon,booster-packs-pokemon,gift-tins-pokemon,other-pokemon";
 
@@ -377,6 +391,49 @@ async function getTitanCardsProducts() {
   return products.slice(0, 25);
 }
 
+async function getJapan2UKProducts() {
+  const feedResults = await Promise.all(
+    JAPAN2UK_PRODUCT_FEEDS.map((url) =>
+      fetchWithTimeout(url, 8000, {
+        Accept: "application/json",
+      })
+    )
+  );
+  const products = [];
+
+  feedResults.forEach(({ status, html }, index) => {
+    if (status !== 200) {
+      throw new Error(`Japan2UK feed ${index + 1} returned ${status}`);
+    }
+
+    const data = JSON.parse(html);
+
+    (data.products || []).forEach((product) => {
+      const title = cleanProductName(product.title || "");
+      const variants = Array.isArray(product.variants) ? product.variants : [];
+      const availableVariants = variants.filter((variant) => variant.available);
+
+      if (!title || availableVariants.length === 0) return;
+      if (!title.toLowerCase().includes("pokemon")) return;
+      if (!matchesKeyword(`${title} ${(product.tags || []).join(" ")}`)) return;
+
+      const firstAvailable = availableVariants[0];
+      const link = `https://www.japan2uk.com/products/${product.handle}`;
+      const price = firstAvailable?.price || firstAvailable?.compare_at_price;
+      const availability = price ? `In stock - £${price}` : "In stock";
+
+      addUniqueProduct(products, {
+        product: title,
+        store: "Japan2UK",
+        availability,
+        link,
+      });
+    });
+  });
+
+  return products.slice(0, 25);
+}
+
 async function getChaosCardsProducts() {
   const { status, html } = await fetchWithTimeout(CHAOS_CARDS_URL);
   if (status !== 200) throw new Error(`Chaos Cards returned ${status}`);
@@ -527,6 +584,7 @@ async function refreshProducts() {
       ["The Card Vault", getCardVaultProducts],
       ["Magic Madhouse", getMagicMadhouseProducts],
       ["Titan Cards", getTitanCardsProducts],
+      ["Japan2UK", getJapan2UKProducts],
       ["Chaos Cards", getChaosCardsProducts],
       ["Argos", getArgosProducts],
       ["Very", getVeryProducts],

@@ -183,6 +183,28 @@ const SHOP_LINK_GROUPS = [
     ],
   },
   {
+    shop: "Japan2UK",
+    note: "Japanese and English Pokemon product drop pages.",
+    links: [
+      {
+        name: "Japanese Pokemon",
+        link: "https://www.japan2uk.com/pages/japanese-pokemon-products-home",
+      },
+      {
+        name: "English Pokemon",
+        link: "https://www.japan2uk.com/pages/english-pokemon-home",
+      },
+      {
+        name: "Japanese booster boxes",
+        link: "https://www.japan2uk.com/collections/pokemon-japanese-booster-boxes",
+      },
+      {
+        name: "English ETBs",
+        link: "https://www.japan2uk.com/collections/pokemon-english-elite-trainer-boxes",
+      },
+    ],
+  },
+  {
     shop: "Argos",
     note: "High-street stock searches for popular Pokemon card products.",
     links: [
@@ -295,6 +317,7 @@ const STORE_ORDER = [
   "The Card Vault",
   "Magic Madhouse",
   "Titan Cards",
+  "Japan2UK",
   "Argos",
   "Very",
   "Amazon UK",
