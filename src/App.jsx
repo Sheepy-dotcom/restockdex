@@ -823,6 +823,11 @@ function DropsPage({
   onEnableNotifications,
   onToggleNotification,
 }) {
+  const activeDropStores = groupedStores.filter(({ items }) => items.length > 0);
+  const quietDropStores = groupedStores.filter(({ items }) => items.length === 0);
+  const activeLiveStores = liveGroupedStores.filter(({ items }) => items.length > 0);
+  const quietLiveStores = liveGroupedStores.filter(({ items }) => items.length === 0);
+
   return (
     <>
       <section className="statsGrid">
@@ -878,8 +883,14 @@ function DropsPage({
           </span>
         </div>
 
+        {activeDropStores.length === 0 && (
+          <p className="emptyText cleanEmpty">
+            No new drops captured in the last 48 hours. RestockDex is still checking every 60 seconds.
+          </p>
+        )}
+
         <div className="shopGrid">
-          {groupedStores.map(({ store, items, status }) => (
+          {activeDropStores.map(({ store, items, status }) => (
             <StoreSection
               key={store}
               store={store}
@@ -890,6 +901,13 @@ function DropsPage({
             />
           ))}
         </div>
+
+        <QuietStores
+          title="Other shops being checked"
+          stores={quietDropStores}
+          loading={loading}
+          mode="drops"
+        />
       </section>
 
       <section className="feedPanel">
@@ -904,8 +922,14 @@ function DropsPage({
           </div>
         </div>
 
+        {activeLiveStores.length === 0 && (
+          <p className="emptyText cleanEmpty">
+            No readable live stock right now. Use the Links page for a quick manual check.
+          </p>
+        )}
+
         <div className="shopGrid">
-          {liveGroupedStores.map(({ store, items, status }) => (
+          {activeLiveStores.map(({ store, items, status }) => (
             <StoreSection
               key={store}
               store={store}
@@ -916,8 +940,40 @@ function DropsPage({
             />
           ))}
         </div>
+
+        <QuietStores
+          title="Other shops being checked"
+          stores={quietLiveStores}
+          loading={loading}
+          mode="live"
+        />
       </section>
     </>
+  );
+}
+
+function QuietStores({ title, stores, loading, mode }) {
+  if (stores.length === 0) return null;
+
+  return (
+    <details className="quietStores">
+      <summary>
+        <span>{title}</span>
+        <strong>{stores.length}</strong>
+      </summary>
+      <div className="shopGrid quietStoreGrid">
+        {stores.map(({ store, items, status }) => (
+          <StoreSection
+            key={store}
+            store={store}
+            items={items}
+            status={status}
+            loading={loading}
+            mode={mode}
+          />
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -1165,6 +1221,8 @@ function NewsPage({
   onToggleNotification,
 }) {
   const [featuredItem, ...otherItems] = newsItems;
+  const visibleOtherItems = otherItems.slice(0, 8);
+  const hiddenNewsCount = Math.max(0, otherItems.length - visibleOtherItems.length);
 
   return (
     <>
@@ -1214,10 +1272,15 @@ function NewsPage({
             <NewsCard item={featuredItem} featured />
             {otherItems.length > 0 && (
               <div className="newsGrid compactNewsGrid">
-                {otherItems.map((item) => (
+                {visibleOtherItems.map((item) => (
                   <NewsCard key={item.link} item={item} />
                 ))}
               </div>
+            )}
+            {hiddenNewsCount > 0 && (
+              <p className="moreNewsText">
+                Showing the newest headlines first. {hiddenNewsCount} more links will appear as the feed refreshes.
+              </p>
             )}
           </>
         )}

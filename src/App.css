@@ -61,20 +61,20 @@ a {
 .heroPanel {
   display: grid;
   justify-items: center;
-  gap: 12px;
-  min-height: 300px;
-  padding: 22px;
+  gap: 10px;
+  min-height: 230px;
+  padding: 18px;
   text-align: center;
   background:
     linear-gradient(105deg, rgba(4, 10, 23, 0.98), rgba(5, 15, 33, 0.94) 62%, rgba(16, 67, 130, 0.7)),
     url("./assets/hero.png");
-  background-position: right 36px bottom 14px;
+  background-position: right 28px bottom 12px;
   background-repeat: no-repeat;
-  background-size: 190px auto;
+  background-size: 150px auto;
 }
 
 .logoImg {
-  width: min(500px, 92vw);
+  width: min(390px, 88vw);
   height: auto;
   display: block;
   filter:
@@ -89,7 +89,7 @@ a {
 .heroText p {
   margin: 0;
   color: #cbdcf4;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.6;
 }
 
@@ -166,13 +166,13 @@ a {
 }
 
 .statCard {
-  min-height: 96px;
-  padding: 16px;
+  min-height: 86px;
+  padding: 14px;
 }
 
 .statCard span {
   display: block;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   color: var(--muted);
   font-weight: 900;
 }
@@ -456,10 +456,10 @@ h3 {
 
 .notificationSettings {
   display: grid;
-  gap: 10px;
+  gap: 9px;
   width: min(100%, 620px);
   margin-top: 8px;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid rgba(79, 163, 255, 0.22);
   border-radius: 8px;
   background: rgba(4, 10, 23, 0.34);
@@ -467,6 +467,9 @@ h3 {
 }
 
 .pageNotificationSettings {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto minmax(220px, 0.7fr);
+  align-items: center;
   margin: 0 0 16px;
 }
 
@@ -531,7 +534,7 @@ h3 {
 }
 
 .feedPanel {
-  padding: 18px;
+  padding: 16px;
   margin-bottom: 16px;
 }
 
@@ -665,13 +668,13 @@ h3 {
 
 .newsCard {
   align-content: space-between;
-  min-height: 190px;
+  min-height: 158px;
 }
 
 .featuredNewsCard {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
-  min-height: 180px;
+  min-height: 145px;
   margin-bottom: 12px;
   border-color: rgba(255, 213, 36, 0.32);
   background:
@@ -680,11 +683,18 @@ h3 {
 }
 
 .featuredNewsCard h3 {
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .compactNewsGrid .newsCard {
-  min-height: 150px;
+  min-height: 132px;
+}
+
+.moreNewsText {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .releaseCard {
@@ -701,6 +711,49 @@ h3 {
 .shopGrid {
   display: grid;
   gap: 8px;
+}
+
+.quietStores {
+  margin-top: 10px;
+  border: 1px solid rgba(79, 163, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(4, 10, 23, 0.24);
+}
+
+.quietStores > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  color: #cfe8ff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  list-style: none;
+}
+
+.quietStores > summary::-webkit-details-marker {
+  display: none;
+}
+
+.quietStores > summary strong {
+  display: inline-flex;
+  min-width: 28px;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #9fb9d5;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.quietStores[open] > summary {
+  border-bottom: 1px solid rgba(79, 163, 255, 0.12);
+}
+
+.quietStoreGrid {
+  padding: 10px;
 }
 
 .storeSection {
@@ -821,6 +874,10 @@ h3 {
   border-radius: 8px;
   color: #9fb9d5;
   background: rgba(255, 255, 255, 0.05);
+}
+
+.cleanEmpty {
+  margin: 0 0 10px;
 }
 
 .emptyText.error {
@@ -1003,17 +1060,17 @@ h3 {
 
   .heroPanel {
     min-height: auto;
-    padding: 16px;
-    background-size: 136px auto;
+    padding: 14px;
+    background-size: 104px auto;
     background-position: right 14px bottom 14px;
   }
 
   .logoImg {
-    width: min(420px, 100%);
+    width: min(330px, 100%);
   }
 
   .heroText p {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .statsGrid,
@@ -1030,6 +1087,11 @@ h3 {
   .feedHeader {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .pageNotificationSettings,
+  .monitorNotificationSettings {
+    grid-template-columns: 1fr;
   }
 
   .storeHeader {
