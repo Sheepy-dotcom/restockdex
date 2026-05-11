@@ -14,12 +14,14 @@ const NOTIFICATIONS_KEY = "restockdex-notifications";
 const NOTIFICATION_PREFS_KEY = "restockdex-notification-prefs";
 const LAST_QUEUE_NOTIFICATION_KEY = "restockdex-last-queue-notification";
 const LAST_DROP_NOTIFICATION_KEY = "restockdex-last-drop-notification";
+const LAST_NEWS_NOTIFICATION_KEY = "restockdex-last-news-notification";
 const QUEUE_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
 
 const DEFAULT_NOTIFICATION_PREFS = {
   queue: true,
   drops: true,
   priority: true,
+  news: true,
 };
 
 function formatDateTime(value) {
@@ -284,8 +286,8 @@ const NEWS_LINKS = [
     link: "https://www.pokeguardian.com/",
   },
   {
-    name: "Pokemon Database news",
-    link: "https://pokemondb.net/news",
+    name: "TCGplayer Pokemon",
+    link: "https://www.tcgplayer.com/content/pokemon/articles",
   },
 ];
 
@@ -330,6 +332,8 @@ function App() {
   const [error, setError] = useState("");
   const lastPokemonCenterStatus = useRef(null);
   const seenDropNotificationLinks = useRef(new Set());
+  const seenNewsNotificationLinks = useRef(new Set());
+  const newsNotificationsPrimed = useRef(false);
 
   useEffect(() => {
     fetchAll();
@@ -531,6 +535,36 @@ function App() {
     });
   }, [dropData, notificationPrefs.drops, notificationPrefs.priority, notificationsEnabled]);
 
+  useEffect(() => {
+    if (newsItems.length === 0) return;
+
+    if (!newsNotificationsPrimed.current) {
+      newsItems.forEach((item) => {
+        if (item.link) seenNewsNotificationLinks.current.add(item.link);
+      });
+      newsNotificationsPrimed.current = true;
+      return;
+    }
+
+    if (!notificationsEnabled || !notificationPrefs.news) return;
+
+    const newNews = newsItems.filter((item) => {
+      if (!item.link || seenNewsNotificationLinks.current.has(item.link)) return false;
+      return true;
+    });
+
+    if (newNews.length === 0) return;
+
+    newNews.forEach((item) => seenNewsNotificationLinks.current.add(item.link));
+
+    sendNotification({
+      storageKey: LAST_NEWS_NOTIFICATION_KEY,
+      title: "New Pokemon news",
+      body: `${newNews[0].source}: ${newNews[0].title}`,
+      cooldownMs: 0,
+    });
+  }, [newsItems, notificationPrefs.news, notificationsEnabled]);
+
   function updateNotificationPref(key) {
     const nextPrefs = {
       ...notificationPrefs,
@@ -680,7 +714,14 @@ function App() {
         )}
 
         {activePage === "news" && (
-          <NewsPage newsItems={newsItems} newsUpdated={newsUpdated} />
+          <NewsPage
+            newsItems={newsItems}
+            newsUpdated={newsUpdated}
+            notificationPrefs={notificationPrefs}
+            notificationsEnabled={notificationsEnabled}
+            onEnableNotifications={enableNotifications}
+            onToggleNotification={updateNotificationPref}
+          />
         )}
 
         <footer className="siteFooter">
@@ -1115,11 +1156,41 @@ function AlertCard({ alert }) {
   return <article className="alertCard">{content}</article>;
 }
 
-function NewsPage({ newsItems, newsUpdated }) {
+function NewsPage({
+  newsItems,
+  newsUpdated,
+  notificationPrefs,
+  notificationsEnabled,
+  onEnableNotifications,
+  onToggleNotification,
+}) {
   const [featuredItem, ...otherItems] = newsItems;
 
   return (
     <>
+      <section className="notificationSettings pageNotificationSettings">
+        <div>
+          <p className="storeKicker">News notifications</p>
+          <h3>Pokemon news alerts</h3>
+          <p>Notify me when a new headline is picked up.</p>
+        </div>
+        <button
+          className="viewButton"
+          disabled={notificationsEnabled}
+          onClick={onEnableNotifications}
+          type="button"
+        >
+          {notificationsEnabled ? "Notifications on" : "Enable notifications"}
+        </button>
+        <div className="toggleGrid">
+          <NotificationToggle
+            checked={notificationPrefs.news}
+            label="News"
+            onClick={() => onToggleNotification("news")}
+          />
+        </div>
+      </section>
+
       <section className="panel">
         <div className="panelHeader">
           <div>

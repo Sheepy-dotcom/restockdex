@@ -47,8 +47,14 @@ const POKECOTTAGE_RELEASE_CALENDAR_URL =
 
 const NEWS_FEEDS = [
   {
-    source: "Pokemon Database",
-    url: "https://pokemondb.net/news/feed",
+    source: "Official Pokemon News",
+    url: "https://play.pokemon.com/en-gb/news/",
+    type: "play_pokemon",
+  },
+  {
+    source: "TCGplayer Pokemon",
+    url: "https://infinite-api.tcgplayer.com/c/articles/",
+    type: "tcgplayer_api",
   },
   {
     source: "Game Rant",
@@ -739,6 +745,31 @@ async function refreshPokemonCenterTraffic() {
 }
 
 async function getNewsFeedItems(feed) {
+  if (feed.type === "tcgplayer_api") {
+    const url = new URL(feed.url);
+    url.search = new URLSearchParams({
+      source: "infinite-content",
+      contentType: "Article",
+      verticals: "pokemon",
+      rows: "8",
+      offset: "0",
+    }).toString();
+
+    const { status, html } = await fetchWithTimeout(url.toString(), 8000, {
+      Accept: "application/json",
+    });
+    if (status !== 200) throw new Error(`${feed.source} returned ${status}`);
+
+    const data = JSON.parse(html);
+    return (data.result || []).map((item) => ({
+      title: cleanNewsText(item.title || ""),
+      link: absoluteUrl(item.canonicalURL, "https://www.tcgplayer.com/content/") || "",
+      source: feed.source,
+      publishedAt: item.dateTime || item.date || "",
+      description: cleanNewsText(item.teaser || "Pokemon TCG article from TCGplayer.").slice(0, 180),
+    })).filter((item) => item.title && item.link);
+  }
+
   const { status, html } = await fetchWithTimeout(feed.url, 8000, feed.headers);
   if (status !== 200) throw new Error(`${feed.source} returned ${status}`);
 
@@ -761,6 +792,33 @@ async function getNewsFeedItems(feed) {
     });
 
     return items.slice(0, feed.limit || 8);
+  }
+
+  if (feed.type === "play_pokemon") {
+    $('[class*="NewsCard"]').each((_, el) => {
+      const card = $(el);
+      const link = card.find("a[href]").first().attr("href");
+      const imageAlt = cleanNewsText(card.find("img[alt]").first().attr("alt") || "");
+      const textParts = card
+        .find("p")
+        .map((__, textEl) => cleanNewsText($(textEl).text()))
+        .get()
+        .filter(Boolean);
+      const publishedAt = textParts[0] || "";
+      const title = imageAlt || textParts[1] || "";
+
+      if (!title || !link) return;
+
+      items.push({
+        title,
+        link: absoluteUrl(link, feed.url) || link,
+        source: feed.source,
+        publishedAt,
+        description: "Official Pokemon news and Play! Pokemon updates.",
+      });
+    });
+
+    return items.slice(0, 8);
   }
 
   $("item").each((_, el) => {
