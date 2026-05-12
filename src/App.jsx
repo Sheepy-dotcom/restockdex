@@ -12,13 +12,16 @@ const POKEMON_CENTER_NEW_RELEASES =
   "https://www.pokemoncenter.com/en-gb/category/new-releases";
 const NOTIFICATIONS_KEY = "restockdex-notifications";
 const NOTIFICATION_PREFS_KEY = "restockdex-notification-prefs";
-const LAST_QUEUE_NOTIFICATION_KEY = "restockdex-last-queue-notification";
+const LAST_AMBER_NOTIFICATION_KEY = "restockdex-last-amber-notification";
+const LAST_RED_NOTIFICATION_KEY = "restockdex-last-red-notification";
 const LAST_DROP_NOTIFICATION_KEY = "restockdex-last-drop-notification";
 const LAST_NEWS_NOTIFICATION_KEY = "restockdex-last-news-notification";
-const QUEUE_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
+const AMBER_NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000;
+const RED_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
 
 const DEFAULT_NOTIFICATION_PREFS = {
-  queue: true,
+  queueAmber: false,
+  queueRed: true,
   drops: true,
   priority: true,
   news: true,
@@ -454,7 +457,7 @@ function App() {
     pokemonCenterStatus === "busy"
       ? "Potential queue"
     : pokemonCenterStatus === "blocked"
-      ? "Manual check"
+      ? "Check manually"
       : pokemonCenterStatus === "normal"
       ? "Normal"
       : "Checking";
@@ -485,8 +488,8 @@ function App() {
         alerts.push({
           id: "pokemon-center-check",
           tone: "warning",
-          title: "Pokemon Center manual check suggested",
-          detail: "The page could not be read clearly this time.",
+          title: "Pokemon Center manual check",
+          detail: "Pokemon Center has not loaded clearly for a while. A quick check is sensible.",
           time: lastUpdated,
         });
       }
@@ -516,18 +519,39 @@ function App() {
 
     if (
       notificationsEnabled &&
+      notificationPrefs.queueRed &&
       pokemonCenterStatus === "busy" &&
       previousStatus &&
       previousStatus !== "busy"
     ) {
       sendNotification({
-        storageKey: LAST_QUEUE_NOTIFICATION_KEY,
-        title: "Pokemon Center queue alert",
+        storageKey: LAST_RED_NOTIFICATION_KEY,
+        title: "Pokemon Center red alert",
         body: "Potential queue signal detected. Check Pokemon Center new releases.",
-        cooldownMs: QUEUE_NOTIFICATION_COOLDOWN_MS,
+        cooldownMs: RED_NOTIFICATION_COOLDOWN_MS,
       });
     }
-  }, [notificationsEnabled, pokemonCenterStatus]);
+
+    if (
+      notificationsEnabled &&
+      notificationPrefs.queueAmber &&
+      pokemonCenterStatus === "blocked" &&
+      previousStatus &&
+      previousStatus !== "blocked"
+    ) {
+      sendNotification({
+        storageKey: LAST_AMBER_NOTIFICATION_KEY,
+        title: "Pokemon Center amber check",
+        body: "Pokemon Center has not loaded clearly for a while. Check new releases when you have a moment.",
+        cooldownMs: AMBER_NOTIFICATION_COOLDOWN_MS,
+      });
+    }
+  }, [
+    notificationPrefs.queueAmber,
+    notificationPrefs.queueRed,
+    notificationsEnabled,
+    pokemonCenterStatus,
+  ]);
 
   useEffect(() => {
     if (!notificationsEnabled) return;
@@ -722,8 +746,10 @@ function App() {
             trafficData={trafficData}
             latestAlerts={latestAlerts}
             lastCheckedLabel={lastCheckedLabel}
+            notificationPrefs={notificationPrefs}
             notificationsEnabled={notificationsEnabled}
             onEnableNotifications={enableNotifications}
+            onToggleNotification={updateNotificationPref}
             watchItems={pokemonCenterWatchItems}
           />
         )}
@@ -1043,8 +1069,10 @@ function MonitorsPage({
   groupedStores,
   latestAlerts,
   lastCheckedLabel,
+  notificationPrefs,
   notificationsEnabled,
   onEnableNotifications,
+  onToggleNotification,
   pokemonCenterStatus,
   trafficBadgeLabel,
   trafficData,
@@ -1099,16 +1127,16 @@ function MonitorsPage({
           </div>
         )}
 
-        <div className={`trafficCard ${pokemonCenterStatus}`}>
+          <div className={`trafficCard ${pokemonCenterStatus}`}>
           <h3>{trafficData?.stock || "Checking access..."}</h3>
           <p>
             {pokemonCenterStatus === "blocked"
-              ? "Pokemon Center has been unclear for around 10 minutes. Use the link below for a manual check."
+              ? "Pokemon Center has not loaded clearly for a while. Tap the link below to check new releases."
               : `Response time: ${trafficData?.responseTime || "Checking"}`}
           </p>
           <div className="statusLegend" aria-label="Pokemon Center status guide">
             <span className="legendChip green"><strong>Green</strong> Normal</span>
-            <span className="legendChip amber"><strong>Amber</strong> Manual check</span>
+            <span className="legendChip amber"><strong>Amber</strong> Check manually</span>
             <span className="legendChip red"><strong>Red</strong> Possible queue</span>
           </div>
           <div className="queueHistory">
@@ -1136,8 +1164,8 @@ function MonitorsPage({
           <div className="notificationSettings monitorNotificationSettings">
             <div>
               <p className="storeKicker">Notifications</p>
-              <h3>Queue alerts</h3>
-              <p>Notify me when Pokemon Center looks busy.</p>
+              <h3>Pokemon Center alerts</h3>
+              <p>Choose red queue alerts and quieter amber checks separately.</p>
             </div>
             <button
               className="viewButton"
@@ -1147,6 +1175,18 @@ function MonitorsPage({
             >
               {notificationsEnabled ? "Notifications on" : "Enable notifications"}
             </button>
+            <div className="toggleGrid">
+              <NotificationToggle
+                checked={notificationPrefs.queueRed}
+                label="Red queue alerts"
+                onClick={() => onToggleNotification("queueRed")}
+              />
+              <NotificationToggle
+                checked={notificationPrefs.queueAmber}
+                label="Amber checks"
+                onClick={() => onToggleNotification("queueAmber")}
+              />
+            </div>
           </div>
         </div>
       </section>

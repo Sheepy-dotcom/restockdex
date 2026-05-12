@@ -150,10 +150,12 @@ let releaseCalendarLastUpdated = null;
 let lastPokemonCenterQueue = null;
 let lastPokemonCenterAccessStatus = "checking";
 let pokemonCenterUnclearChecks = 0;
+let pokemonCenterAmberScore = 0;
 let queueHistory = [];
 const DROP_HISTORY_MS = 48 * 60 * 60 * 1000;
 const QUEUE_HISTORY_LIMIT = 50;
-const POKEMON_CENTER_UNCLEAR_LIMIT = 10;
+const POKEMON_CENTER_UNCLEAR_LIMIT = 20;
+const POKEMON_CENTER_AMBER_SCORE_LIMIT = 30;
 
 function setupNeeded(message) {
   const error = new Error(message);
@@ -223,6 +225,13 @@ function titleFromUrl(url) {
       .replace(/-/g, " ")
       .replace(/\b\w/g, (letter) => letter.toUpperCase())
   );
+}
+
+function tcgplayerArticleUrl(canonicalUrl) {
+  if (!canonicalUrl) return "";
+  if (canonicalUrl.startsWith("http")) return canonicalUrl;
+
+  return `https://www.tcgplayer.com/content${canonicalUrl.startsWith("/") ? "" : "/"}${canonicalUrl}`;
 }
 
 function isChallengePage(html) {
@@ -724,19 +733,29 @@ async function refreshPokemonCenterTraffic() {
     const hasQueueSignal = detectedSignals.some((signal) =>
       ["queue", "waiting room", "high traffic"].includes(signal)
     );
+    const hasAmberSignal = detectedSignals.some((signal) =>
+      ["captcha", "access denied", "challenge", "please wait"].includes(signal)
+    );
     const isBusy =
       [429, 503].includes(status) ||
       responseTime > 10000 ||
-      hasQueueSignal ||
-      detectedSignals.length >= 3;
-    const isUnclear = status === 403;
-    pokemonCenterUnclearChecks = isBusy || !isUnclear ? 0 : pokemonCenterUnclearChecks + 1;
-    const showUnclear = pokemonCenterUnclearChecks >= POKEMON_CENTER_UNCLEAR_LIMIT;
+      hasQueueSignal;
+    const isUnclear = [401, 403, 406, 408].includes(status) || hasAmberSignal;
+    if (isBusy || !isUnclear) {
+      pokemonCenterUnclearChecks = 0;
+      pokemonCenterAmberScore = 0;
+    } else {
+      pokemonCenterUnclearChecks += 1;
+      pokemonCenterAmberScore += hasAmberSignal ? 2 : 1;
+    }
+    const showUnclear =
+      pokemonCenterUnclearChecks >= POKEMON_CENTER_UNCLEAR_LIMIT &&
+      pokemonCenterAmberScore >= POKEMON_CENTER_AMBER_SCORE_LIMIT;
     const accessStatus = isBusy ? "busy" : showUnclear ? "blocked" : "normal";
     const statusText = isBusy
       ? "Potential queue / busy"
       : showUnclear
-      ? "Manual check suggested"
+      ? "Check manually"
       : "Normal";
     const queueReason =
       detectedSignals.length > 0
@@ -770,6 +789,8 @@ async function refreshPokemonCenterTraffic() {
         detectedSignals,
         unclearChecks: pokemonCenterUnclearChecks,
         unclearLimit: POKEMON_CENTER_UNCLEAR_LIMIT,
+        amberScore: pokemonCenterAmberScore,
+        amberScoreLimit: POKEMON_CENTER_AMBER_SCORE_LIMIT,
         lastQueueSeenAt: lastPokemonCenterQueue?.seenAt || null,
         lastQueueReason: lastPokemonCenterQueue?.reason || null,
         link: POKEMON_CENTER_URL,
@@ -779,19 +800,24 @@ async function refreshPokemonCenterTraffic() {
     console.log("Traffic cache updated:", cachedTraffic[0].stock);
   } catch (error) {
     pokemonCenterUnclearChecks += 1;
-    const showUnclear = pokemonCenterUnclearChecks >= POKEMON_CENTER_UNCLEAR_LIMIT;
+    pokemonCenterAmberScore += 1;
+    const showUnclear =
+      pokemonCenterUnclearChecks >= POKEMON_CENTER_UNCLEAR_LIMIT &&
+      pokemonCenterAmberScore >= POKEMON_CENTER_AMBER_SCORE_LIMIT;
     lastPokemonCenterAccessStatus = showUnclear ? "blocked" : "normal";
     cachedTraffic = [
       {
         product: "Pokémon Center Monitor",
         store: "Pokémon Center UK",
-        stock: showUnclear ? "Manual check suggested" : "Normal",
+        stock: showUnclear ? "Check manually" : "Normal",
         accessStatus: showUnclear ? "blocked" : "normal",
         httpStatus: "Error",
         responseTime: "Timeout",
         detectedSignals: ["timeout or blocked"],
         unclearChecks: pokemonCenterUnclearChecks,
         unclearLimit: POKEMON_CENTER_UNCLEAR_LIMIT,
+        amberScore: pokemonCenterAmberScore,
+        amberScoreLimit: POKEMON_CENTER_AMBER_SCORE_LIMIT,
         lastQueueSeenAt: lastPokemonCenterQueue?.seenAt || null,
         lastQueueReason: lastPokemonCenterQueue?.reason || null,
         link: POKEMON_CENTER_URL,
@@ -821,7 +847,7 @@ async function getNewsFeedItems(feed) {
     const data = JSON.parse(html);
     return (data.result || []).map((item) => ({
       title: cleanNewsText(item.title || ""),
-      link: absoluteUrl(item.canonicalURL, "https://www.tcgplayer.com/content/") || "",
+      link: tcgplayerArticleUrl(item.canonicalURL),
       source: feed.source,
       publishedAt: item.dateTime || item.date || "",
       description: cleanNewsText(item.teaser || "Pokemon TCG article from TCGplayer.").slice(0, 180),

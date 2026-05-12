@@ -489,6 +489,10 @@ h3 {
   align-items: center;
 }
 
+.monitorNotificationSettings .toggleGrid {
+  grid-column: 1 / -1;
+}
+
 .toggleGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

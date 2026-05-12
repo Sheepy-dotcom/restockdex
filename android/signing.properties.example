@@ -1,0 +1,4 @@
+storeFile=restockdex-upload-key.jks
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyAlias=restockdex-upload
+keyPassword=YOUR_KEY_PASSWORD
