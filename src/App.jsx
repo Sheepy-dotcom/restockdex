@@ -1141,9 +1141,12 @@ function MonitorsPage({
           </div>
           <div className="queueHistory">
             <span>Last queue recorded</span>
-            <strong>{lastQueueSeen || "None since monitor started"}</strong>
+            <strong>{lastQueueSeen || "No red queue recorded yet"}</strong>
             {trafficData?.lastQueueReason && (
               <p>Signal: {trafficData.lastQueueReason}</p>
+            )}
+            {!lastQueueSeen && (
+              <p>The monitor is active and will save the next strong queue signal here.</p>
             )}
           </div>
           <div className="trafficActions">

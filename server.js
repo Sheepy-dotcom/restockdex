@@ -746,7 +746,9 @@ async function refreshPokemonCenterTraffic() {
       pokemonCenterAmberScore = 0;
     } else {
       pokemonCenterUnclearChecks += 1;
-      pokemonCenterAmberScore += hasAmberSignal ? 2 : 1;
+      pokemonCenterAmberScore = hasAmberSignal
+        ? pokemonCenterAmberScore + 2
+        : Math.max(0, pokemonCenterAmberScore - 1);
     }
     const showUnclear =
       pokemonCenterUnclearChecks >= POKEMON_CENTER_UNCLEAR_LIMIT &&
@@ -800,7 +802,7 @@ async function refreshPokemonCenterTraffic() {
     console.log("Traffic cache updated:", cachedTraffic[0].stock);
   } catch (error) {
     pokemonCenterUnclearChecks += 1;
-    pokemonCenterAmberScore += 1;
+    pokemonCenterAmberScore = Math.max(0, pokemonCenterAmberScore - 1);
     const showUnclear =
       pokemonCenterUnclearChecks >= POKEMON_CENTER_UNCLEAR_LIMIT &&
       pokemonCenterAmberScore >= POKEMON_CENTER_AMBER_SCORE_LIMIT;
