@@ -19,9 +19,11 @@
     "@capacitor/core": "^8.3.2",
     "@capacitor/ios": "^8.3.2",
     "@capacitor/local-notifications": "^8.1.0",
+    "@capacitor/push-notifications": "^8.0.4",
     "cheerio": "latest",
     "cors": "latest",
     "express": "latest",
+    "firebase-admin": "^13.9.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

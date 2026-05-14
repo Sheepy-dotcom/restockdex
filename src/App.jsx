@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { PushNotifications } from "@capacitor/push-notifications";
 import "./App.css";
 import logo from "./assets/restockdex-logo.png";
 import pokemonCenterLogo from "./assets/pokemon-center-white.png";
@@ -16,6 +17,9 @@ const LAST_AMBER_NOTIFICATION_KEY = "restockdex-last-amber-notification";
 const LAST_RED_NOTIFICATION_KEY = "restockdex-last-red-notification";
 const LAST_DROP_NOTIFICATION_KEY = "restockdex-last-drop-notification";
 const LAST_NEWS_NOTIFICATION_KEY = "restockdex-last-news-notification";
+const SEEN_DROP_NOTIFICATION_LINKS_KEY = "restockdex-seen-drop-notification-links";
+const SEEN_NEWS_NOTIFICATION_LINKS_KEY = "restockdex-seen-news-notification-links";
+const PUSH_TOKEN_KEY = "restockdex-push-token";
 const AMBER_NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000;
 const RED_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
 
@@ -51,6 +55,19 @@ function formatTime(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function loadStoredLinkSet(storageKey) {
+  try {
+    const links = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    return new Set(Array.isArray(links) ? links : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveStoredLinkSet(storageKey, links) {
+  localStorage.setItem(storageKey, JSON.stringify([...links].slice(-250)));
 }
 
 function daysUntilDate(value) {
@@ -357,14 +374,47 @@ function App() {
   });
   const [error, setError] = useState("");
   const lastPokemonCenterStatus = useRef(null);
-  const seenDropNotificationLinks = useRef(new Set());
-  const seenNewsNotificationLinks = useRef(new Set());
-  const newsNotificationsPrimed = useRef(false);
+  const seenDropNotificationLinks = useRef(
+    loadStoredLinkSet(SEEN_DROP_NOTIFICATION_LINKS_KEY)
+  );
+  const seenNewsNotificationLinks = useRef(
+    loadStoredLinkSet(SEEN_NEWS_NOTIFICATION_LINKS_KEY)
+  );
+  const dropNotificationsPrimed = useRef(seenDropNotificationLinks.current.size > 0);
+  const newsNotificationsPrimed = useRef(seenNewsNotificationLinks.current.size > 0);
+  const pushToken = useRef(localStorage.getItem(PUSH_TOKEN_KEY) || "");
+  const pushListenersReady = useRef(false);
 
   useEffect(() => {
     fetchAll();
     const interval = setInterval(fetchAll, 60000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (notificationsEnabled && Capacitor.isNativePlatform()) {
+      setupNativePushNotifications();
+    }
+  }, [notificationsEnabled]);
+
+  useEffect(() => {
+    if (pushToken.current) {
+      registerPushToken(pushToken.current, notificationPrefs);
+    }
+  }, [notificationPrefs]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") fetchAll();
+    };
+
+    window.addEventListener("focus", fetchAll);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.removeEventListener("focus", fetchAll);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, []);
 
   async function fetchAll() {
@@ -554,6 +604,20 @@ function App() {
   ]);
 
   useEffect(() => {
+    if (dropData.length === 0) return;
+
+    if (!dropNotificationsPrimed.current) {
+      dropData.forEach((item) => {
+        if (item.link) seenDropNotificationLinks.current.add(item.link);
+      });
+      saveStoredLinkSet(
+        SEEN_DROP_NOTIFICATION_LINKS_KEY,
+        seenDropNotificationLinks.current
+      );
+      dropNotificationsPrimed.current = true;
+      return;
+    }
+
     if (!notificationsEnabled) return;
 
     const newDrops = dropData.filter((item) => {
@@ -564,6 +628,10 @@ function App() {
     if (newDrops.length === 0) return;
 
     newDrops.forEach((item) => seenDropNotificationLinks.current.add(item.link));
+    saveStoredLinkSet(
+      SEEN_DROP_NOTIFICATION_LINKS_KEY,
+      seenDropNotificationLinks.current
+    );
 
     const priorityDrops = newDrops.filter((item) =>
       item.alert?.includes("KEYWORD")
@@ -589,6 +657,10 @@ function App() {
       newsItems.forEach((item) => {
         if (item.link) seenNewsNotificationLinks.current.add(item.link);
       });
+      saveStoredLinkSet(
+        SEEN_NEWS_NOTIFICATION_LINKS_KEY,
+        seenNewsNotificationLinks.current
+      );
       newsNotificationsPrimed.current = true;
       return;
     }
@@ -603,6 +675,10 @@ function App() {
     if (newNews.length === 0) return;
 
     newNews.forEach((item) => seenNewsNotificationLinks.current.add(item.link));
+    saveStoredLinkSet(
+      SEEN_NEWS_NOTIFICATION_LINKS_KEY,
+      seenNewsNotificationLinks.current
+    );
 
     sendNotification({
       storageKey: LAST_NEWS_NOTIFICATION_KEY,
@@ -622,6 +698,47 @@ function App() {
     localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(nextPrefs));
   }
 
+  async function registerPushToken(token, prefs = notificationPrefs) {
+    try {
+      await fetch(`${API_URL}/push/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token,
+          platform: Capacitor.getPlatform(),
+          preferences: prefs,
+        }),
+      });
+    } catch (err) {
+      console.error("Push token registration failed:", err);
+    }
+  }
+
+  async function setupNativePushNotifications() {
+    if (!Capacitor.isNativePlatform() || pushListenersReady.current) return;
+    pushListenersReady.current = true;
+
+    await PushNotifications.addListener("registration", async (token) => {
+      pushToken.current = token.value;
+      localStorage.setItem(PUSH_TOKEN_KEY, token.value);
+      await registerPushToken(token.value);
+    });
+
+    await PushNotifications.addListener("registrationError", (error) => {
+      console.error("Push registration failed:", error);
+      setError("Push notifications could not register on this device yet.");
+    });
+
+    await PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
+      const link = event.notification.data?.link;
+      if (link) window.open(link, "_blank", "noreferrer");
+    });
+
+    await PushNotifications.register();
+  }
+
   async function enableNotifications() {
     let webGranted = false;
     let nativeGranted = false;
@@ -636,8 +753,11 @@ function App() {
 
     if (Capacitor.isNativePlatform()) {
       try {
-        const permissions = await LocalNotifications.requestPermissions();
-        nativeGranted = permissions.display === "granted";
+        const localPermissions = await LocalNotifications.requestPermissions();
+        const pushPermissions = await PushNotifications.requestPermissions();
+        nativeGranted =
+          localPermissions.display === "granted" ||
+          pushPermissions.receive === "granted";
       } catch (err) {
         console.error("Native notification permission failed:", err);
       }
@@ -646,6 +766,7 @@ function App() {
     if (webGranted || nativeGranted) {
       localStorage.setItem(NOTIFICATIONS_KEY, "enabled");
       setNotificationsEnabled(true);
+      if (Capacitor.isNativePlatform()) await setupNativePushNotifications();
       setError("");
     } else {
       setError("Notifications were not enabled. Check your browser or phone settings.");
@@ -668,7 +789,7 @@ function App() {
       });
     }
 
-    if (Capacitor.isNativePlatform()) {
+    if (Capacitor.isNativePlatform() && !pushToken.current) {
       try {
         await LocalNotifications.schedule({
           notifications: [

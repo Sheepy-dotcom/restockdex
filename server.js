@@ -1,16 +1,21 @@
 import express from "express";
 import cors from "cors";
 import * as cheerio from "cheerio";
+import admin from "firebase-admin";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 
 const app = express();
 app.use(cors());
+app.use(express.json({ limit: "1mb" }));
 
 const PORT = process.env.PORT || 8080;
 const QUEUE_HISTORY_FILE =
   process.env.QUEUE_HISTORY_FILE ||
   path.join(process.cwd(), "data", "queue-history.json");
+const PUSH_TOKENS_FILE =
+  process.env.PUSH_TOKENS_FILE ||
+  path.join(process.cwd(), "data", "push-tokens.json");
 
 const CARD_VAULT_URL =
   "https://thecardvault.co.uk/collections/pokemon-new-releases";
@@ -152,6 +157,10 @@ let lastPokemonCenterAccessStatus = "checking";
 let pokemonCenterUnclearChecks = 0;
 let pokemonCenterAmberScore = 0;
 let queueHistory = [];
+let pushTokens = new Map();
+let previousNewsLinks = new Set();
+let newsLinksPrimed = false;
+let firebaseReady = false;
 const DROP_HISTORY_MS = 48 * 60 * 60 * 1000;
 const QUEUE_HISTORY_LIMIT = 50;
 const POKEMON_CENTER_UNCLEAR_LIMIT = 20;
@@ -276,6 +285,111 @@ async function saveQueueHistory() {
     );
   } catch (error) {
     console.error("Queue history save failed:", error.message);
+  }
+}
+
+function getFirebaseServiceAccount() {
+  const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!rawJson) return null;
+
+  try {
+    const account = JSON.parse(rawJson);
+    if (account.private_key) {
+      account.private_key = account.private_key.replace(/\\n/g, "\n");
+    }
+    return account;
+  } catch (error) {
+    console.error("Firebase service account JSON is invalid:", error.message);
+    return null;
+  }
+}
+
+function setupFirebaseMessaging() {
+  const account = getFirebaseServiceAccount();
+  if (!account) {
+    console.log("Firebase push notifications not configured yet");
+    return;
+  }
+
+  try {
+    if (admin.apps.length === 0) {
+      admin.initializeApp({
+        credential: admin.credential.cert(account),
+      });
+    }
+    firebaseReady = true;
+    console.log("Firebase push notifications ready");
+  } catch (error) {
+    firebaseReady = false;
+    console.error("Firebase setup failed:", error.message);
+  }
+}
+
+async function loadPushTokens() {
+  try {
+    const data = JSON.parse(await readFile(PUSH_TOKENS_FILE, "utf8"));
+    const tokens = Array.isArray(data.tokens) ? data.tokens : [];
+    pushTokens = new Map(tokens.map((token) => [token.token, token]));
+    console.log(`Loaded ${pushTokens.size} push notification tokens`);
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      console.error("Push token load failed:", error.message);
+    }
+  }
+}
+
+async function savePushTokens() {
+  try {
+    await mkdir(path.dirname(PUSH_TOKENS_FILE), { recursive: true });
+    await writeFile(
+      PUSH_TOKENS_FILE,
+      JSON.stringify({ tokens: [...pushTokens.values()] }, null, 2)
+    );
+  } catch (error) {
+    console.error("Push token save failed:", error.message);
+  }
+}
+
+function wantsPush(tokenRecord, preference) {
+  return tokenRecord.preferences?.[preference] !== false;
+}
+
+async function sendPushNotification({ preference, title, body, data = {} }) {
+  if (!firebaseReady || pushTokens.size === 0) return;
+
+  const tokens = [...pushTokens.values()]
+    .filter((tokenRecord) => wantsPush(tokenRecord, preference))
+    .map((tokenRecord) => tokenRecord.token);
+
+  if (tokens.length === 0) return;
+
+  try {
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      data: Object.fromEntries(
+        Object.entries(data).map(([key, value]) => [key, String(value ?? "")])
+      ),
+    });
+
+    response.responses.forEach((result, index) => {
+      if (result.success) return;
+
+      const code = result.error?.code || "";
+      if (
+        code.includes("registration-token-not-registered") ||
+        code.includes("invalid-registration-token")
+      ) {
+        pushTokens.delete(tokens[index]);
+      }
+    });
+
+    if (response.failureCount > 0) await savePushTokens();
+    console.log(
+      `Push sent: ${response.successCount} ok, ${response.failureCount} failed`
+    );
+  } catch (error) {
+    console.error("Push send failed:", error.message);
   }
 }
 
@@ -699,6 +813,23 @@ async function refreshProducts() {
       ),
     ]);
 
+    if (freshDrops.length > 0) {
+      const priorityDrop = freshDrops.find((drop) =>
+        drop.alert?.includes("KEYWORD")
+      );
+      const alertDrop = priorityDrop || freshDrops[0];
+      await sendPushNotification({
+        preference: priorityDrop ? "priority" : "drops",
+        title: priorityDrop ? "Priority Pokemon stock" : "New Pokemon stock",
+        body: `${alertDrop.store}: ${alertDrop.product}`,
+        data: {
+          type: "drop",
+          link: alertDrop.link,
+          store: alertDrop.store,
+        },
+      });
+    }
+
     lastUpdated = new Date().toISOString();
 
     console.log(`Product cache updated: ${cachedProducts.length} items`);
@@ -777,6 +908,29 @@ async function refreshPokemonCenterTraffic() {
         detectedSignals,
         link: POKEMON_CENTER_URL,
       });
+      await sendPushNotification({
+        preference: "queueRed",
+        title: "Pokemon Center red alert",
+        body: "Potential queue signal detected. Check Pokemon Center new releases.",
+        data: {
+          type: "queue-red",
+          link: POKEMON_CENTER_URL,
+          reason: queueReason || "busy signal detected",
+        },
+      });
+    }
+
+    if (showUnclear && lastPokemonCenterAccessStatus !== "blocked") {
+      await sendPushNotification({
+        preference: "queueAmber",
+        title: "Pokemon Center amber check",
+        body: "Pokemon Center has not loaded clearly for a while. Check new releases when you have a moment.",
+        data: {
+          type: "queue-amber",
+          link: POKEMON_CENTER_URL,
+          reason: queueReason || "manual check suggested",
+        },
+      });
     }
     lastPokemonCenterAccessStatus = accessStatus;
 
@@ -806,6 +960,18 @@ async function refreshPokemonCenterTraffic() {
     const showUnclear =
       pokemonCenterUnclearChecks >= POKEMON_CENTER_UNCLEAR_LIMIT &&
       pokemonCenterAmberScore >= POKEMON_CENTER_AMBER_SCORE_LIMIT;
+    if (showUnclear && lastPokemonCenterAccessStatus !== "blocked") {
+      await sendPushNotification({
+        preference: "queueAmber",
+        title: "Pokemon Center amber check",
+        body: "Pokemon Center has not loaded clearly for a while. Check new releases when you have a moment.",
+        data: {
+          type: "queue-amber",
+          link: POKEMON_CENTER_URL,
+          reason: "timeout or blocked",
+        },
+      });
+    }
     lastPokemonCenterAccessStatus = showUnclear ? "blocked" : "normal";
     cachedTraffic = [
       {
@@ -960,7 +1126,7 @@ async function refreshNews() {
       );
     const sourceCounts = new Map();
 
-    cachedNews = uniqueNewsItems
+    const nextNews = uniqueNewsItems
       .filter((item) => {
         const count = sourceCounts.get(item.source) || 0;
         if (count >= 6) return false;
@@ -973,7 +1139,34 @@ async function refreshNews() {
           new Date(a.publishedAt || 0).getTime()
       )
       .slice(0, 18);
+
+    const nextNewsLinks = new Set(nextNews.map((item) => item.link).filter(Boolean));
+    const newNewsItems = nextNews.filter(
+      (item) => item.link && !previousNewsLinks.has(item.link)
+    );
+
+    cachedNews = nextNews;
     newsLastUpdated = new Date().toISOString();
+
+    if (!newsLinksPrimed) {
+      previousNewsLinks = nextNewsLinks;
+      newsLinksPrimed = true;
+      return;
+    }
+
+    previousNewsLinks = nextNewsLinks;
+    if (newNewsItems.length > 0) {
+      await sendPushNotification({
+        preference: "news",
+        title: "New Pokemon news",
+        body: `${newNewsItems[0].source}: ${newNewsItems[0].title}`,
+        data: {
+          type: "news",
+          link: newNewsItems[0].link,
+          source: newNewsItems[0].source,
+        },
+      });
+    }
   } catch (error) {
     console.error("News refresh failed:", error.message);
   }
@@ -1041,7 +1234,9 @@ async function refreshAll() {
   ]);
 }
 
+setupFirebaseMessaging();
 await loadQueueHistory();
+await loadPushTokens();
 refreshAll();
 setInterval(refreshAll, 60000);
 
@@ -1090,6 +1285,45 @@ app.get("/pokemon-center-queue-history", (req, res) => {
   res.json({
     lastQueue: lastPokemonCenterQueue,
     events: queueHistory,
+  });
+});
+
+app.post("/push/register", async (req, res) => {
+  const { token, platform, preferences } = req.body || {};
+  if (!token || typeof token !== "string") {
+    return res.status(400).json({ error: "Push token is required" });
+  }
+
+  pushTokens.set(token, {
+    token,
+    platform: platform || "unknown",
+    preferences: {
+      queueAmber: preferences?.queueAmber !== false,
+      queueRed: preferences?.queueRed !== false,
+      drops: preferences?.drops !== false,
+      priority: preferences?.priority !== false,
+      news: preferences?.news !== false,
+    },
+    updatedAt: new Date().toISOString(),
+  });
+
+  await savePushTokens();
+  res.json({ ok: true });
+});
+
+app.post("/push/unregister", async (req, res) => {
+  const { token } = req.body || {};
+  if (token) {
+    pushTokens.delete(token);
+    await savePushTokens();
+  }
+  res.json({ ok: true });
+});
+
+app.get("/push/status", (req, res) => {
+  res.json({
+    configured: firebaseReady,
+    registeredDevices: pushTokens.size,
   });
 });
 
