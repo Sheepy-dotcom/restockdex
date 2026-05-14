@@ -53,7 +53,7 @@ const VERY_URL =
   "https://www.very.co.uk/search/pokemon%20cards";
 
 const AMAZON_URL =
-  "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys";
+  "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys&tag=restockdex-21";
 
 const SMYTHS_URL =
   "https://www.smythstoys.com/uk/en-gb/brand/pokemon/pokemon-trading-card-game/c/SM0601011202";

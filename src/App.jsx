@@ -20,6 +20,7 @@ const LAST_NEWS_NOTIFICATION_KEY = "restockdex-last-news-notification";
 const SEEN_DROP_NOTIFICATION_LINKS_KEY = "restockdex-seen-drop-notification-links";
 const SEEN_NEWS_NOTIFICATION_LINKS_KEY = "restockdex-seen-news-notification-links";
 const PUSH_TOKEN_KEY = "restockdex-push-token";
+const AMAZON_ASSOCIATE_TAG = "restockdex-21";
 const AMBER_NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000;
 const RED_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
 
@@ -68,6 +69,12 @@ function loadStoredLinkSet(storageKey) {
 
 function saveStoredLinkSet(storageKey, links) {
   localStorage.setItem(storageKey, JSON.stringify([...links].slice(-250)));
+}
+
+function amazonLink(url) {
+  const amazonUrl = new URL(url);
+  amazonUrl.searchParams.set("tag", AMAZON_ASSOCIATE_TAG);
+  return amazonUrl.toString();
 }
 
 function daysUntilDate(value) {
@@ -120,19 +127,19 @@ const SHOP_LINK_GROUPS = [
     links: [
       {
         name: "Newest Pokemon TCG",
-        link: "https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys&s=date-desc-rank",
+        link: amazonLink("https://www.amazon.co.uk/s?k=pokemon+trading+card+game&i=toys&s=date-desc-rank"),
       },
       {
         name: "Booster bundles",
-        link: "https://www.amazon.co.uk/s?k=pokemon+booster+bundle&i=toys&s=date-desc-rank",
+        link: amazonLink("https://www.amazon.co.uk/s?k=pokemon+booster+bundle&i=toys&s=date-desc-rank"),
       },
       {
         name: "Elite trainer boxes",
-        link: "https://www.amazon.co.uk/s?k=pokemon+elite+trainer+box&i=toys&s=date-desc-rank",
+        link: amazonLink("https://www.amazon.co.uk/s?k=pokemon+elite+trainer+box&i=toys&s=date-desc-rank"),
       },
       {
         name: "Tins",
-        link: "https://www.amazon.co.uk/s?k=pokemon+tcg+tin&i=toys&s=date-desc-rank",
+        link: amazonLink("https://www.amazon.co.uk/s?k=pokemon+tcg+tin&i=toys&s=date-desc-rank"),
       },
     ],
   },
@@ -1154,6 +1161,9 @@ function LinksPage() {
         <div>
           <p className="eyebrow">Manual checks</p>
           <h2>Shop product links</h2>
+          <p className="sectionIntro">
+            Some shop links may be affiliate links. RestockDex may earn a commission at no extra cost to you.
+          </p>
         </div>
         <span className="shopStatus error">Links only</span>
       </div>
