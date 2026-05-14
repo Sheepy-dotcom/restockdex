@@ -16,6 +16,9 @@ const QUEUE_HISTORY_FILE =
 const PUSH_TOKENS_FILE =
   process.env.PUSH_TOKENS_FILE ||
   path.join(process.cwd(), "data", "push-tokens.json");
+const PUSH_REMINDERS_FILE =
+  process.env.PUSH_REMINDERS_FILE ||
+  path.join(process.cwd(), "data", "push-reminders.json");
 
 const CARD_VAULT_URL =
   "https://thecardvault.co.uk/collections/pokemon-new-releases";
@@ -161,10 +164,12 @@ let pushTokens = new Map();
 let previousNewsLinks = new Set();
 let newsLinksPrimed = false;
 let firebaseReady = false;
+let lastShopReminderAt = null;
 const DROP_HISTORY_MS = 48 * 60 * 60 * 1000;
 const QUEUE_HISTORY_LIMIT = 50;
 const POKEMON_CENTER_UNCLEAR_LIMIT = 20;
 const POKEMON_CENTER_AMBER_SCORE_LIMIT = 30;
+const SHOP_REMINDER_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
 
 function setupNeeded(message) {
   const error = new Error(message);
@@ -350,6 +355,29 @@ async function savePushTokens() {
   }
 }
 
+async function loadPushReminders() {
+  try {
+    const data = JSON.parse(await readFile(PUSH_REMINDERS_FILE, "utf8"));
+    lastShopReminderAt = data.lastShopReminderAt || null;
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      console.error("Push reminder load failed:", error.message);
+    }
+  }
+}
+
+async function savePushReminders() {
+  try {
+    await mkdir(path.dirname(PUSH_REMINDERS_FILE), { recursive: true });
+    await writeFile(
+      PUSH_REMINDERS_FILE,
+      JSON.stringify({ lastShopReminderAt }, null, 2)
+    );
+  } catch (error) {
+    console.error("Push reminder save failed:", error.message);
+  }
+}
+
 function wantsPush(tokenRecord, preference) {
   return tokenRecord.preferences?.[preference] !== false;
 }
@@ -391,6 +419,31 @@ async function sendPushNotification({ preference, title, body, data = {} }) {
   } catch (error) {
     console.error("Push send failed:", error.message);
   }
+}
+
+async function maybeSendShopReminder() {
+  if (!firebaseReady || pushTokens.size === 0) return;
+
+  const lastSentTime = lastShopReminderAt
+    ? new Date(lastShopReminderAt).getTime()
+    : 0;
+
+  if (lastSentTime && Date.now() - lastSentTime < SHOP_REMINDER_INTERVAL_MS) {
+    return;
+  }
+
+  await sendPushNotification({
+    preference: "shopReminder",
+    title: "Amazon invite check",
+    body: "Fresh Pokemon products, stock picks, and invite links may have changed. Open RestockDex to check.",
+    data: {
+      type: "shop-reminder",
+      link: "https://www.restockdex.co.uk/",
+    },
+  });
+
+  lastShopReminderAt = new Date().toISOString();
+  await savePushReminders();
 }
 
 async function recordPokemonCenterQueue(event) {
@@ -1231,12 +1284,14 @@ async function refreshAll() {
     refreshPokemonCenterTraffic(),
     refreshNews(),
     refreshReleaseCalendar(),
+    maybeSendShopReminder(),
   ]);
 }
 
 setupFirebaseMessaging();
 await loadQueueHistory();
 await loadPushTokens();
+await loadPushReminders();
 refreshAll();
 setInterval(refreshAll, 60000);
 
@@ -1303,6 +1358,7 @@ app.post("/push/register", async (req, res) => {
       drops: preferences?.drops !== false,
       priority: preferences?.priority !== false,
       news: preferences?.news !== false,
+      shopReminder: preferences?.shopReminder === true,
     },
     updatedAt: new Date().toISOString(),
   });

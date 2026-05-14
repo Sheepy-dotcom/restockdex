@@ -30,6 +30,7 @@ const DEFAULT_NOTIFICATION_PREFS = {
   drops: true,
   priority: true,
   news: true,
+  shopReminder: false,
 };
 
 function formatDateTime(value) {
@@ -362,7 +363,6 @@ function App() {
   const [releaseItems, setReleaseItems] = useState([]);
   const [releaseSource, setReleaseSource] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [newsUpdated, setNewsUpdated] = useState(null);
   const [releaseUpdated, setReleaseUpdated] = useState(null);
@@ -426,7 +426,6 @@ function App() {
 
   async function fetchAll() {
     try {
-      setRefreshing(true);
       setError("");
       const fetchJson = async (path) => {
         const response = await fetch(`${API_URL}${path}`);
@@ -488,7 +487,6 @@ function App() {
       setError("Could not connect to the RestockDex API.");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }
 
@@ -818,31 +816,23 @@ function App() {
     <div className="page">
       <div className="app">
         <header className="heroPanel">
-          <img src={logo} className="logoImg" alt="RestockDex" />
+          <button
+            className="logoButton"
+            type="button"
+            aria-label="Go to Monitor and refresh RestockDex"
+            onClick={() => {
+              setActivePage("monitors");
+              fetchAll();
+            }}
+          >
+            <img src={logo} className="logoImg" alt="RestockDex" />
+          </button>
 
           <div className="heroText">
             <p>
               Pokemon Center queue alerts, tracked shop stock, release calendar,
               and Pokemon news in one tidy dashboard.
             </p>
-          </div>
-
-          <div className="heroStatus">
-            <span className={`statusBadge ${pokemonCenterStatus}`}>
-              {trafficBadgeLabel}
-            </span>
-            <span>{lastCheckedLabel ? `Last checked ${lastCheckedLabel}` : "Checking now"}</span>
-          </div>
-
-          <div className="heroActions">
-            <button
-              className="refreshButton"
-              disabled={refreshing}
-              onClick={fetchAll}
-              type="button"
-            >
-              {refreshing ? "Refreshing..." : "Refresh now"}
-            </button>
           </div>
         </header>
 
@@ -864,7 +854,14 @@ function App() {
           />
         )}
 
-        {activePage === "links" && <LinksPage />}
+        {activePage === "links" && (
+          <LinksPage
+            notificationPrefs={notificationPrefs}
+            notificationsEnabled={notificationsEnabled}
+            onEnableNotifications={enableNotifications}
+            onToggleNotification={updateNotificationPref}
+          />
+        )}
 
         {activePage === "monitors" && (
           <MonitorsPage
@@ -1154,23 +1151,51 @@ function QuietStores({ title, stores, loading, mode }) {
   );
 }
 
-function LinksPage() {
+function LinksPage({
+  notificationPrefs,
+  notificationsEnabled,
+  onEnableNotifications,
+  onToggleNotification,
+}) {
   return (
-    <section className="panel">
-      <div className="panelHeader">
+    <>
+      <section className="notificationSettings pageNotificationSettings">
         <div>
-          <p className="eyebrow">Manual checks</p>
-          <h2>Shop product links</h2>
-          <p className="sectionIntro">
-            Some shop links may be affiliate links. RestockDex may earn a commission at no extra cost to you.
-          </p>
+          <p className="storeKicker">Amazon picks</p>
+          <h3>Amazon invite checker</h3>
         </div>
-        <span className="shopStatus error">Links only</span>
-      </div>
+        <button
+          className="viewButton"
+          disabled={notificationsEnabled}
+          onClick={onEnableNotifications}
+          type="button"
+        >
+          {notificationsEnabled ? "Notifications on" : "Enable notifications"}
+        </button>
+        <div className="toggleGrid">
+          <NotificationToggle
+            checked={notificationPrefs.shopReminder}
+            label="Amazon invite checks"
+            onClick={() => onToggleNotification("shopReminder")}
+          />
+        </div>
+      </section>
 
-      <div className="shopLinkGroups">
-        {SHOP_LINK_GROUPS.map((group) => (
-          <article className="linkGroup" key={group.shop}>
+      <section className="panel">
+        <div className="panelHeader">
+          <div>
+            <p className="eyebrow">Manual checks</p>
+            <h2>Shop product links</h2>
+            <p className="sectionIntro">
+              Some shop links may be affiliate links. RestockDex may earn a commission at no extra cost to you.
+            </p>
+          </div>
+          <span className="shopStatus error">Links only</span>
+        </div>
+
+        <div className="shopLinkGroups">
+          {SHOP_LINK_GROUPS.map((group) => (
+            <article className="linkGroup" key={group.shop}>
             <div>
               <p className="storeKicker">{group.note}</p>
               <h3>{group.shop}</h3>
@@ -1189,10 +1214,11 @@ function LinksPage() {
                 </a>
               ))}
             </div>
-          </article>
-        ))}
-      </div>
-    </section>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
 
